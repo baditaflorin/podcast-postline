@@ -1,0 +1,11 @@
+{
+  "name": "podcast-postline",
+  "short_name": "postline",
+  "description": "Podcast denoise, loudness normalization, silence trimming, and export.",
+  "start_url": "/podcast-postline/",
+  "display": "standalone",
+  "background_color": "#f6f1e8",
+  "theme_color": "#f6f1e8",
+  "icons": []
+}
+
