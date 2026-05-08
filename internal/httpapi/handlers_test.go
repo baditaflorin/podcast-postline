@@ -38,7 +38,7 @@ func TestProcessEndpointWithStubProcessor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateFormFile() error = %v", err)
 	}
-	if _, err := io.Copy(file, strings.NewReader("fake audio")); err != nil {
+	if _, err := file.Write(tinyWAV()); err != nil {
 		t.Fatalf("write multipart file: %v", err)
 	}
 	_ = writer.WriteField("format", "mp3")
@@ -59,6 +59,15 @@ func TestProcessEndpointWithStubProcessor(t *testing.T) {
 	}
 	if got := response.Header().Get("Content-Disposition"); !strings.Contains(got, "episode-postline.mp3") {
 		t.Fatalf("Content-Disposition = %q", got)
+	}
+}
+
+func tinyWAV() []byte {
+	return []byte{
+		'R', 'I', 'F', 'F', 40, 0, 0, 0, 'W', 'A', 'V', 'E',
+		'f', 'm', 't', ' ', 16, 0, 0, 0, 1, 0, 1, 0,
+		0x40, 0x1f, 0, 0, 0x80, 0x3e, 0, 0, 2, 0, 16, 0,
+		'd', 'a', 't', 'a', 4, 0, 0, 0, 0, 0, 0, 0x40,
 	}
 }
 

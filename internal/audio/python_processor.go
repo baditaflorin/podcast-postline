@@ -46,6 +46,15 @@ func (p PythonProcessor) Process(ctx context.Context, inputPath string, original
 	if options.TrimSilence {
 		args = append(args, "--trim_silence")
 	}
+	if options.Denoise {
+		args = append(args, "--denoise")
+	}
+	if !options.Normalize {
+		args = append(args, "--skip_normalize")
+	}
+	if options.PreserveStereo {
+		args = append(args, "--preserve_channels")
+	}
 
 	pythonBin := p.PythonBin
 	if pythonBin == "" {

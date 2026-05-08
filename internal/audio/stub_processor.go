@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 // StubProcessor creates deterministic fake exports for tests and smoke checks.
@@ -44,10 +43,13 @@ func (p StubProcessor) Process(ctx context.Context, inputPath string, originalNa
 		Filename:    filepath.Base(outputPath),
 		ContentType: ContentType(options.Format),
 		Metrics: map[string]any{
-			"processor":   "stub",
-			"target_lufs": options.TargetLUFS,
-			"generated":   time.Now().UTC().Format(time.RFC3339),
-			"input_path":  filepath.Base(inputPath),
+			"processor":       "stub",
+			"target_lufs":     options.TargetLUFS,
+			"denoise":         options.Denoise,
+			"normalize":       options.Normalize,
+			"trim_silence":    options.TrimSilence,
+			"preserve_stereo": options.PreserveStereo,
+			"input_path":      filepath.Base(inputPath),
 		},
 		CleanupPaths: []string{dir},
 	}, nil

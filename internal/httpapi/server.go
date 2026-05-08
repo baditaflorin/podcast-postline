@@ -18,6 +18,7 @@ import (
 type Server struct {
 	cfg       config.Config
 	processor audio.Processor
+	analyzer  audio.Analyzer
 	metrics   *observability.Metrics
 	logger    *slog.Logger
 	validator *validator.Validate
@@ -28,6 +29,7 @@ func NewRouter(cfg config.Config, processor audio.Processor, metrics *observabil
 	server := &Server{
 		cfg:       cfg,
 		processor: processor,
+		analyzer:  audio.FileAnalyzer{MaxUploadBytes: cfg.MaxUploadBytes},
 		metrics:   metrics,
 		logger:    logger,
 		validator: validator.New(validator.WithRequiredStructEnabled()),
@@ -43,7 +45,7 @@ func NewRouter(cfg config.Config, processor audio.Processor, metrics *observabil
 		AllowedOrigins:   cfg.AllowedOrigins,
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodOptions},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Requested-With"},
-		ExposedHeaders:   []string{"Content-Disposition", "X-Postline-Version"},
+		ExposedHeaders:   []string{"Content-Disposition", "X-Postline-Version", "X-Postline-Provenance", "X-Postline-Confidence", "X-Postline-Plan", "X-Postline-Warnings"},
 		AllowCredentials: false,
 		MaxAge:           int((12 * time.Hour).Seconds()),
 	}))
@@ -53,6 +55,7 @@ func NewRouter(cfg config.Config, processor audio.Processor, metrics *observabil
 	router.Handle("/metrics", metrics.Handler())
 	router.Route("/api", func(r chi.Router) {
 		r.Get("/version", server.version)
+		r.Post("/preflight", server.preflight)
 		r.Post("/process", server.process)
 	})
 

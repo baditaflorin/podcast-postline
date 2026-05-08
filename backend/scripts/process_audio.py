@@ -24,8 +24,8 @@ def run(command: list[str]) -> None:
         )
 
 
-def decode_to_wav(input_path: Path, output_path: Path) -> None:
-    run([
+def decode_to_wav(input_path: Path, output_path: Path, preserve_channels: bool) -> None:
+    command = [
         "ffmpeg",
         "-hide_banner",
         "-loglevel",
@@ -33,12 +33,13 @@ def decode_to_wav(input_path: Path, output_path: Path) -> None:
         "-y",
         "-i",
         str(input_path),
-        "-ac",
-        "1",
         "-ar",
         "48000",
-        str(output_path),
-    ])
+    ]
+    if not preserve_channels:
+        command.extend(["-ac", "1"])
+    command.append(str(output_path))
+    run(command)
 
 
 def rnnoise_denoise(rnnoise_demo: str, input_wav: Path, work_dir: Path, output_wav: Path) -> None:
@@ -143,7 +144,13 @@ def export_audio(input_wav: Path, output_path: Path, output_format: str) -> None
         codec = ["-codec:a", "pcm_s16le"]
     else:
         raise RuntimeError(f"unsupported output format: {output_format}")
-    run(base + codec + [str(output_path)])
+    metadata = [
+        "-metadata",
+        "encoded_by=podcast-postline",
+        "-metadata",
+        "comment=processed by podcast-postline",
+    ]
+    run(base + metadata + codec + [str(output_path)])
 
 
 def parse_args() -> argparse.Namespace:
@@ -153,6 +160,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target_lufs", type=float, default=-16.0)
     parser.add_argument("--format", choices=["mp3", "wav", "m4a"], default="mp3")
     parser.add_argument("--trim_silence", action="store_true")
+    parser.add_argument("--denoise", action="store_true")
+    parser.add_argument("--skip_normalize", action="store_true")
+    parser.add_argument("--preserve_channels", action="store_true")
     parser.add_argument("--rnnoise_demo", default="rnnoise_demo")
     parser.add_argument("--work_dir", required=True)
     return parser.parse_args()
@@ -171,9 +181,24 @@ def main() -> int:
     trimmed = work_dir / "trimmed.wav"
 
     try:
-        decode_to_wav(input_path, decoded)
-        rnnoise_denoise(args.rnnoise_demo, decoded, work_dir, denoised)
-        metrics = normalize_loudness(denoised, normalized, args.target_lufs)
+        if args.denoise and args.preserve_channels:
+            raise RuntimeError("RNNoise denoise currently requires mono; disable preserve stereo or disable denoise.")
+
+        decode_to_wav(input_path, decoded, args.preserve_channels)
+        source = decoded
+        if args.denoise:
+            rnnoise_denoise(args.rnnoise_demo, decoded, work_dir, denoised)
+            source = denoised
+        metrics = {
+            "target_lufs": round(float(args.target_lufs), 2),
+            "denoise": bool(args.denoise),
+            "normalize": not bool(args.skip_normalize),
+            "preserve_channels": bool(args.preserve_channels),
+        }
+        if args.skip_normalize:
+            normalized.write_bytes(source.read_bytes())
+        else:
+            metrics.update(normalize_loudness(source, normalized, args.target_lufs))
         source = normalized
         if args.trim_silence:
             trim_silence(normalized, trimmed)
@@ -194,4 +219,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

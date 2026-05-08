@@ -30,7 +30,7 @@ done
 curl -fsS "http://127.0.0.1:$PORT/readyz" >/dev/null
 curl -fsS "http://127.0.0.1:$PORT/api/version" >/dev/null
 curl -fsS "http://127.0.0.1:$PORT/metrics" >/dev/null
-printf 'fake audio' > "$TMP/fake.wav"
+node -e "const fs=require('fs'); fs.writeFileSync(process.argv[1], Buffer.from([82,73,70,70,40,0,0,0,87,65,86,69,102,109,116,32,16,0,0,0,1,0,1,0,64,31,0,0,128,62,0,0,2,0,16,0,100,97,116,97,4,0,0,0,0,0,0,64]));" "$TMP/fake.wav"
 curl -fsS \
   -F "file=@$TMP/fake.wav;type=audio/wav" \
   -F "target_lufs=-16" \
