@@ -1,0 +1,8 @@
+node_modules
+docs/assets
+go.sum
+coverage
+tmp
+dist
+dist-data
+

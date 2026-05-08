@@ -1,0 +1,44 @@
+{
+  "name": "podcast-postline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build && node scripts/copy-spa-fallback.mjs",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest --run",
+    "typecheck": "tsc -p frontend/tsconfig.json --noEmit",
+    "lint": "eslint frontend --max-warnings=0",
+    "fmt": "prettier --write .",
+    "fmt:check": "prettier --check .",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.7",
+    "@vitejs/plugin-react": "^5.1.0",
+    "lucide-react": "^0.554.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^16.5.0",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "tailwindcss": "^3.4.18",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^7.2.2",
+    "vitest": "^4.0.8"
+  }
+}
+
