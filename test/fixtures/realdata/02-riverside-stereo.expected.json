@@ -1,0 +1,1 @@
+{"status":"needs_review","plan_label":"Preserve stereo speech","overall_confidence_min":0.75,"must_recommend":{"denoise":false,"normalize":true,"trim_silence":true,"preserve_stereo":true},"must_warn":["stereo_preserved","denoise_skipped_for_stereo"]}

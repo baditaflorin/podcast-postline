@@ -1,0 +1,1 @@
+{"status":"needs_review","plan_label":"Legacy archive repair","overall_confidence_min":0.62,"must_recommend":{"denoise":true,"normalize":true,"trim_silence":true,"preserve_stereo":false},"must_warn":["legacy_format","near_clipping","dc_offset"]}

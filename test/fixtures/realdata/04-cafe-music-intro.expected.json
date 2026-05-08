@@ -1,0 +1,1 @@
+{"status":"needs_review","plan_label":"Protect mixed music and speech","overall_confidence_min":0.55,"must_recommend":{"denoise":false,"normalize":true,"trim_silence":false,"preserve_stereo":true},"must_warn":["mixed_music_speech","trim_disabled_for_intro","denoise_low_confidence"]}

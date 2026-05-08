@@ -1,0 +1,1 @@
+{"status":"needs_review","plan_label":"Long episode with pauses","overall_confidence_min":0.7,"must_recommend":{"denoise":true,"normalize":true,"trim_silence":true,"preserve_stereo":true},"must_warn":["long_running_job","many_pauses","stereo_preserved"]}
