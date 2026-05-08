@@ -1,0 +1,48 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs / temp
+*.log
+tmp/
+coverage/
+.nyc_output/
+
+# Node
+node_modules/
+frontend/node_modules/
+.vite/
+playwright-report/
+test-results/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Go
+bin/
+*.test
+*.out
+
+# Build outputs not served by GitHub Pages
+dist/
+dist-data/
+
+# Local deploy files
+deploy/.env
+
