@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        VERSION: 0.1.0
+        COMMIT: dev
+        CREATED: local
+    environment:
+      APP_ENV: development
+      ALLOWED_ORIGINS: http://localhost:5173,http://localhost:4173
+      PROCESSOR_MODE: stub
+    ports:
+      - "8080:8080"
+

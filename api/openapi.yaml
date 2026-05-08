@@ -1,0 +1,90 @@
+openapi: 3.1.0
+info:
+  title: podcast-postline API
+  version: 0.1.0
+  description: API-only backend for podcast denoise, loudness normalization, silence trimming, and export.
+servers:
+  - url: http://localhost:8080
+paths:
+  /healthz:
+    get:
+      summary: Liveness probe
+      responses:
+        "200":
+          description: Backend is alive.
+  /readyz:
+    get:
+      summary: Readiness probe
+      responses:
+        "200":
+          description: Backend is ready.
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      responses:
+        "200":
+          description: Prometheus text exposition.
+  /api/version:
+    get:
+      summary: Runtime version
+      responses:
+        "200":
+          description: Version payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [version, commit, date]
+                properties:
+                  version:
+                    type: string
+                  commit:
+                    type: string
+                  date:
+                    type: string
+  /api/process:
+    post:
+      summary: Process one podcast recording
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                target_lufs:
+                  type: number
+                  default: -16
+                  minimum: -30
+                  maximum: -6
+                format:
+                  type: string
+                  enum: [mp3, wav, m4a]
+                  default: mp3
+                trim_silence:
+                  type: boolean
+                  default: true
+      responses:
+        "200":
+          description: Processed audio export.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+            X-Postline-Version:
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid request.
+        "502":
+          description: Audio processing failed.
+

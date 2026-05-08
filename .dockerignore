@@ -1,0 +1,15 @@
+.git
+.github
+node_modules
+frontend/node_modules
+docs/assets
+tmp
+coverage
+dist
+dist-data
+playwright-report
+test-results
+.env
+.env.*
+!.env.example
+

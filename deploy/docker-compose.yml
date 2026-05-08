@@ -1,0 +1,73 @@
+services:
+  app:
+    image: ghcr.io/baditaflorin/podcast-postline:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: "8080"
+      APP_ENV: production
+      ALLOWED_ORIGINS: https://baditaflorin.github.io
+      PROCESSOR_MODE: real
+    read_only: true
+    tmpfs:
+      - /tmp:size=2g,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: [CMD, /app/postline-server, -healthcheck]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - postline
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 3G
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "25342:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - postline
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: [metrics]
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - postline
+
+networks:
+  postline:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+

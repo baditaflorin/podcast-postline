@@ -1,0 +1,25 @@
+{
+  "title": "podcast-postline",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP requests",
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(postline_http_requests_total[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Audio processing duration p95",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(postline_audio_process_duration_seconds_bucket[5m])))"
+        }
+      ]
+    }
+  ]
+}
+
