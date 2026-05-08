@@ -8,6 +8,8 @@ PAGES_URL := https://baditaflorin.github.io/podcast-postline/
 REPO_URL := https://github.com/baditaflorin/podcast-postline
 PAYPAL_URL := https://www.paypal.com/paypalme/florinbadita
 API_BASE_URL ?= http://localhost:8080
+BUILDER ?=
+BUILDER_FLAG := $(if $(BUILDER),--builder $(BUILDER),)
 
 .PHONY: help install-hooks dev build data test test-integration smoke lint fmt pages-preview docker-build docker-push release compose-up compose-down clean hooks-pre-commit hooks-commit-msg hooks-pre-push
 
@@ -83,7 +85,7 @@ pages-preview:
 	npx vite preview --host 127.0.0.1 --port 4173
 
 docker-build:
-	docker buildx build --platform linux/amd64 \
+	docker buildx build $(BUILDER_FLAG) --platform linux/amd64 --load \
 		--build-arg VERSION=$(VERSION) \
 		--build-arg COMMIT=$(GIT_COMMIT) \
 		--build-arg CREATED=$(CREATED) \
@@ -93,7 +95,7 @@ docker-build:
 		.
 
 docker-push:
-	docker buildx build --platform linux/amd64 --push \
+	docker buildx build $(BUILDER_FLAG) --platform linux/amd64 --push \
 		--build-arg VERSION=$(VERSION) \
 		--build-arg COMMIT=$(GIT_COMMIT) \
 		--build-arg CREATED=$(CREATED) \
