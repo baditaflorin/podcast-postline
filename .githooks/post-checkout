@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+echo "post-checkout: no generated code to refresh in v1"
+

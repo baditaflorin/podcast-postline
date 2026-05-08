@@ -13,4 +13,3 @@ services:
       PROCESSOR_MODE: stub
     ports:
       - "8080:8080"
-

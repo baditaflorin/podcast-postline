@@ -70,4 +70,3 @@ networks:
 
 volumes:
   prometheus-data:
-

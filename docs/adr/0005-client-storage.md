@@ -24,4 +24,3 @@ Do not store uploaded audio, processed audio, secrets, or API tokens in browser 
 
 - IndexedDB/OPFS: unnecessary for small preference data.
 - Server persistence: rejected because accounts and sync are non-goals for v1.
-

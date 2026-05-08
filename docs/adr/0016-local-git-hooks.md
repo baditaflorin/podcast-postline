@@ -27,4 +27,3 @@ Hooks:
 ## Alternatives Considered
 
 - lefthook: viable, but plain hooks avoid another dependency for v1.
-

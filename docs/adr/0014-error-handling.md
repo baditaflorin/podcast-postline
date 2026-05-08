@@ -22,4 +22,3 @@ The Python pipeline exits non-zero with a concise stderr message and prints mach
 ## Alternatives Considered
 
 - Panics for impossible states: rejected; handlers return errors instead.
-

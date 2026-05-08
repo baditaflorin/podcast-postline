@@ -1,7 +1,11 @@
+// Package version contains build-time metadata stamped into the server binary.
 package version
 
 var (
+	// Version is the semantic application version.
 	Version = "0.1.0"
-	Commit  = "dev"
-	Date    = "unknown"
+	// Commit is the git commit used for the build.
+	Commit = "dev"
+	// Date is the UTC build timestamp.
+	Date = "unknown"
 )

@@ -14,4 +14,3 @@ Please report security issues privately by emailing baditaflorin@gmail.com with:
 - Any suggested mitigation
 
 Do not open public issues for vulnerabilities until a fix is available.
-

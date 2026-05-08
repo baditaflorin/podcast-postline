@@ -11,6 +11,7 @@ import (
 	"strconv"
 )
 
+// PythonProcessor runs the production Python/native audio pipeline.
 type PythonProcessor struct {
 	PythonBin      string
 	ScriptPath     string
@@ -19,6 +20,7 @@ type PythonProcessor struct {
 	CommandTimeout string
 }
 
+// Process executes the configured Python pipeline and returns the exported file.
 func (p PythonProcessor) Process(ctx context.Context, inputPath string, originalName string, options Options) (Result, error) {
 	options = NormalizeOptions(options)
 	workDir := p.WorkDir
@@ -50,6 +52,7 @@ func (p PythonProcessor) Process(ctx context.Context, inputPath string, original
 		pythonBin = "python3"
 	}
 
+	// #nosec G204 -- pythonBin and script path are deployment configuration, not user input.
 	cmd := exec.CommandContext(ctx, pythonBin, args...)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

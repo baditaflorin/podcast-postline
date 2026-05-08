@@ -1,3 +1,4 @@
+// Package config loads backend runtime configuration from environment variables.
 package config
 
 import (
@@ -8,6 +9,7 @@ import (
 	"time"
 )
 
+// Config contains all runtime settings for the API server.
 type Config struct {
 	AppEnv          string
 	Port            string
@@ -21,6 +23,7 @@ type Config struct {
 	ShutdownTimeout time.Duration
 }
 
+// Load reads environment variables, applies defaults, and validates the result.
 func Load() (Config, error) {
 	maxUploadMB, err := intEnv("MAX_UPLOAD_MB", 750)
 	if err != nil {

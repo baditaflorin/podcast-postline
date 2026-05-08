@@ -23,4 +23,3 @@ Use React, TypeScript strict mode, Vite, Tailwind CSS, Zod, TanStack Query, and 
 
 - Vanilla TypeScript: viable, but state and accessibility details become more bespoke.
 - Svelte: viable, but React has broader ecosystem support for the selected libraries.
-

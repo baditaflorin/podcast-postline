@@ -87,4 +87,3 @@ paths:
           description: Invalid request.
         "502":
           description: Audio processing failed.
-

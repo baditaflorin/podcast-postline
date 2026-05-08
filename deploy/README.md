@@ -54,4 +54,3 @@ docker compose up -d
 ## Backups
 
 The app stores only temporary uploaded and processed files in `/tmp`; no persistent app data is required in v1.
-

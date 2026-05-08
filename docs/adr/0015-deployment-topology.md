@@ -27,4 +27,3 @@ Deploy as:
 
 - Pages-only deployment: rejected in ADR 0001.
 - Backend serving frontend: rejected in ADR 0002.
-

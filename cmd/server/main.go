@@ -1,3 +1,4 @@
+// Command server runs the podcast-postline API backend.
 package main
 
 import (
@@ -97,7 +98,7 @@ func runHealthcheck(port string) error {
 	if err != nil {
 		return fmt.Errorf("healthcheck request failed: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("healthcheck status = %d", response.StatusCode)
 	}

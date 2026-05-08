@@ -2,6 +2,8 @@
 
 Live site: https://baditaflorin.github.io/podcast-postline/
 
+Repository: https://github.com/baditaflorin/podcast-postline
+
 GitHub Pages serves this repository from the `main` branch `/docs` folder.
 
 ## Republish
@@ -23,3 +25,8 @@ Revert the publishing commit and push `main` again.
 
 No custom domain is configured for v1. If one is added later, place the domain in `docs/CNAME` and configure DNS according to GitHub Pages documentation.
 
+## Backend
+
+Mode C backend deployment is documented at:
+
+https://github.com/baditaflorin/podcast-postline/blob/main/deploy/README.md

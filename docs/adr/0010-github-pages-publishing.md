@@ -29,4 +29,3 @@ Publish from the `main` branch `/docs` folder:
 
 - `gh-pages` branch: rejected to keep local-only publishing simple.
 - GitHub Actions Pages deployment: rejected because the project requires no GitHub Actions.
-

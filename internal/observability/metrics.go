@@ -1,3 +1,4 @@
+// Package observability defines Prometheus metrics for the backend.
 package observability
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+// Metrics owns the Prometheus registry and project-specific collectors.
 type Metrics struct {
 	Registry       *prometheus.Registry
 	httpDuration   *prometheus.HistogramVec
@@ -20,6 +22,7 @@ type Metrics struct {
 	audioFailed    prometheus.Counter
 }
 
+// NewMetrics registers HTTP, audio, Go runtime, and process collectors.
 func NewMetrics() *Metrics {
 	registry := prometheus.NewRegistry()
 
@@ -62,10 +65,12 @@ func NewMetrics() *Metrics {
 	return metrics
 }
 
+// Handler returns the Prometheus scrape endpoint handler.
 func (m *Metrics) Handler() http.Handler {
 	return promhttp.HandlerFor(m.Registry, promhttp.HandlerOpts{})
 }
 
+// Middleware records request counts and durations for every HTTP request.
 func (m *Metrics) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
@@ -80,6 +85,7 @@ func (m *Metrics) Middleware(next http.Handler) http.Handler {
 	})
 }
 
+// ObserveAudio records the duration and outcome of one audio processing request.
 func (m *Metrics) ObserveAudio(format string, duration time.Duration, success bool) {
 	status := "success"
 	if !success {

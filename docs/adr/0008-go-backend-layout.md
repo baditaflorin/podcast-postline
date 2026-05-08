@@ -28,4 +28,3 @@ Follow the common Go project layout:
 ## Alternatives Considered
 
 - Flat package layout: rejected because the project spans HTTP, processing, config, and observability.
-

@@ -26,4 +26,3 @@ Use:
 ## Alternatives Considered
 
 - Always running real audio processing in pre-push: rejected because it would be slow and machine-dependent.
-

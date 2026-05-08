@@ -25,4 +25,3 @@ The frontend is a static Vite app served from `main` branch `/docs`. The backend
 
 - Mode A: pure GitHub Pages. Rejected for v1 because FFmpeg, RNNoise, SoX, and Python loudness analysis would require large WASM/Pyodide assets, complex cross-origin isolation workarounds, and high browser memory usage for long episodes.
 - Mode B: GitHub Pages plus pre-built data. Rejected because each user uploads private audio and needs runtime processing, not shared static artifacts.
-

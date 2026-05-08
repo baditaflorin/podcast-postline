@@ -22,4 +22,3 @@ Do not ship WASM modules in v1. Native audio processing runs in the Docker backe
 
 - ffmpeg.wasm plus Pyodide/pyloudnorm: rejected for long-form podcast memory and payload concerns.
 - RNNoise WASM only: rejected because the full requested pipeline still needs native FFmpeg and loudness analysis.
-

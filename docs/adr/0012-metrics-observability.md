@@ -28,4 +28,3 @@ nginx blocks public access to `/metrics`. Prometheus is profile-gated in Compose
 
 - No metrics: rejected because processing duration and failures are core operational signals.
 - Hosted analytics: rejected for backend observability.
-

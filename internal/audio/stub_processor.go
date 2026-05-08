@@ -8,10 +8,12 @@ import (
 	"time"
 )
 
+// StubProcessor creates deterministic fake exports for tests and smoke checks.
 type StubProcessor struct {
 	WorkDir string
 }
 
+// Process writes a small placeholder file without invoking native audio tools.
 func (p StubProcessor) Process(ctx context.Context, inputPath string, originalName string, options Options) (Result, error) {
 	select {
 	case <-ctx.Done():

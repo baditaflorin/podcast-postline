@@ -14,6 +14,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// Server owns HTTP handlers and shared API dependencies.
 type Server struct {
 	cfg       config.Config
 	processor audio.Processor
@@ -22,6 +23,7 @@ type Server struct {
 	validator *validator.Validate
 }
 
+// NewRouter builds the API router with middleware, CORS, metrics, and routes.
 func NewRouter(cfg config.Config, processor audio.Processor, metrics *observability.Metrics, logger *slog.Logger) http.Handler {
 	server := &Server{
 		cfg:       cfg,

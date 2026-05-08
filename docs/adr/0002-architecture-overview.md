@@ -30,4 +30,3 @@ Use these boundaries:
 
 - Single Node app: rejected because the native pipeline and operational requirements are better isolated in Docker.
 - Backend serving static assets: rejected because GitHub Pages is a first-class deliverable.
-

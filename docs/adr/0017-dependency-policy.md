@@ -26,4 +26,3 @@ Pin dependencies through `go.mod`, `package-lock.json`, and Docker image tags. R
 ## Alternatives Considered
 
 - Hand-written router, upload parsing, metrics, or audio DSP: rejected.
-

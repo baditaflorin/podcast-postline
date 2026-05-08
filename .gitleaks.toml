@@ -1,0 +1,10 @@
+title = "podcast-postline gitleaks config"
+
+[allowlist]
+description = "Allow public project URLs and placeholders"
+regexes = [
+  '''https://github.com/baditaflorin/podcast-postline''',
+  '''https://www.paypal.com/paypalme/florinbadita''',
+  '''example.com'''
+]
+

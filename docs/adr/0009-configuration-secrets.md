@@ -24,4 +24,3 @@ No `.env` files, keys, tokens, or certificates are committed.
 
 - Committed config files with real values: rejected because secrets must stay out of git.
 - Runtime frontend secrets: rejected categorically.
-

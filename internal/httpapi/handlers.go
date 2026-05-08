@@ -1,3 +1,4 @@
+// Package httpapi exposes the HTTP API for processing uploaded audio.
 package httpapi
 
 import (
@@ -59,7 +60,7 @@ func (s *Server) process(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "file is required")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	options, err := parseOptions(r)
 	if err != nil {
@@ -88,7 +89,7 @@ func (s *Server) process(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, path := range result.CleanupPaths {
-		defer os.RemoveAll(path)
+		defer func(path string) { _ = os.RemoveAll(path) }(path)
 	}
 
 	output, err := os.Open(result.Path)
@@ -97,7 +98,7 @@ func (s *Server) process(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not open processed audio")
 		return
 	}
-	defer output.Close()
+	defer func() { _ = output.Close() }()
 
 	stat, err := output.Stat()
 	if err != nil {
@@ -159,12 +160,13 @@ func saveUpload(workDir, filename string, reader io.Reader) (string, func(), err
 		ext = ".audio"
 	}
 	path := filepath.Join(dir, "input"+ext)
+	// #nosec G304,G703 -- path is constructed inside a fresh private temp directory.
 	output, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
 		_ = os.RemoveAll(dir)
 		return "", nil, fmt.Errorf("create upload file: %w", err)
 	}
-	defer output.Close()
+	defer func() { _ = output.Close() }()
 
 	if _, err := io.Copy(output, reader); err != nil {
 		_ = os.RemoveAll(dir)

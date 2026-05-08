@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+message_file="$1"
+first_line="$(sed -n '1p' "$message_file")"
+
+if ! printf '%s' "$first_line" | grep -Eq '^(feat|fix|docs|chore|refactor|test|ops|data|security|build)(\([a-z0-9._-]+\))?: .+'; then
+  echo "Commit message must use Conventional Commits, e.g. feat: add upload flow"
+  exit 1
+fi
+

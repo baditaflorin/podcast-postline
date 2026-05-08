@@ -20,4 +20,3 @@ No static data pipeline is used in v1.
 ## Alternatives Considered
 
 - Pre-building example audio artifacts: rejected because they do not help user uploads.
-

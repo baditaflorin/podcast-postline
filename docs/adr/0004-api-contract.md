@@ -30,4 +30,3 @@ The OpenAPI contract is stored at `api/openapi.yaml`.
 
 - Job queue with polling: deferred until files are large enough to require background processing.
 - WebSocket progress: deferred for v1; the current UI reports request lifecycle state.
-

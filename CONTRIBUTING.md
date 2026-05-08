@@ -12,4 +12,3 @@ Thanks for helping improve `podcast-postline`.
 ## Pull Requests
 
 Keep pull requests focused on one concern. Include tests or explain why the change is documentation-only.
-

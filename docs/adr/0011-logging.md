@@ -23,4 +23,3 @@ The frontend logs nothing in production except unrecoverable error boundary repo
 
 - Text logs: rejected because JSON logs are easier to ship and filter.
 - Client analytics logs: rejected for v1 privacy.
-

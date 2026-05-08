@@ -1,3 +1,4 @@
+// Package audio defines processing interfaces and implementations.
 package audio
 
 import (
@@ -9,12 +10,14 @@ import (
 	"strings"
 )
 
+// Options configures one audio processing request.
 type Options struct {
 	TargetLUFS  float64 `validate:"gte=-30,lte=-6"`
 	Format      string  `validate:"oneof=mp3 wav m4a"`
 	TrimSilence bool
 }
 
+// Result describes a processed export and any temporary paths to remove.
 type Result struct {
 	Path         string
 	Filename     string
@@ -23,10 +26,12 @@ type Result struct {
 	CleanupPaths []string
 }
 
+// Processor converts one uploaded recording into a publish-ready export.
 type Processor interface {
 	Process(ctx context.Context, inputPath string, originalName string, options Options) (Result, error)
 }
 
+// NormalizeOptions applies v1 defaults to processing options.
 func NormalizeOptions(options Options) Options {
 	if options.TargetLUFS == 0 {
 		options.TargetLUFS = -16
@@ -38,6 +43,7 @@ func NormalizeOptions(options Options) Options {
 	return options
 }
 
+// ResultFilename returns a safe default output filename for a processed upload.
 func ResultFilename(originalName, format string) string {
 	base := strings.TrimSuffix(filepath.Base(originalName), filepath.Ext(originalName))
 	base = safeName(base)
@@ -47,6 +53,7 @@ func ResultFilename(originalName, format string) string {
 	return fmt.Sprintf("%s-postline.%s", base, format)
 }
 
+// ContentType maps a supported export format to an HTTP content type.
 func ContentType(format string) string {
 	switch format {
 	case "mp3":
