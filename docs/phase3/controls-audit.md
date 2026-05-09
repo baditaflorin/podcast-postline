@@ -25,3 +25,19 @@ Baseline date: 2026-05-10
 | Debug query `?debug=1`          | Works fully     | Shows internal state JSON.                                                         | Keep and include Phase 3 state.                                     |
 
 Before count: green 14, yellow 4, red 0.
+
+## After Phase 3
+
+| Control group     | Final status | Evidence                                                                            |
+| ----------------- | ------------ | ----------------------------------------------------------------------------------- |
+| Project links     | Works fully  | Existing Playwright metadata test.                                                  |
+| Input actions     | Works fully  | Sample, paste guidance, import state, and start fresh are wired.                    |
+| Picker/drop zone  | Works fully  | Multi-file picker/drop uses shared queue path.                                      |
+| Queue controls    | Works fully  | Selecting queued files triggers preflight; busy operations block unsafe switching.  |
+| Settings controls | Works fully  | Preferences persist and are included in workspace export/import.                    |
+| API base URL      | Works fully  | URL validity is visible before processing.                                          |
+| Run/cancel/reset  | Works fully  | Processing, cancellation, active status reset, and fresh-start reset are reachable. |
+| Output actions    | Works fully  | State download, share link, provenance, copy, snippets, and print are wired.        |
+| Debug surface     | Works fully  | `?debug=1` includes queue/workspace/activity state.                                 |
+
+After count: green 18, yellow 0, red 0.

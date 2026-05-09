@@ -22,3 +22,24 @@ Scope: podcast-postline Mode C static frontend plus Docker backend. This audit m
 | Restored autosave     | Works partially | Preferences persist in `localStorage`; selected file, plan, queue, and provenance do not.                                                         | A reload loses the active job context.                                        | Finish metadata/session restoration without pretending browsers can always persist raw files.          |
 
 Before count: green 0, yellow 4, red 6, out-of-scope 4.
+
+## After Phase 3
+
+| Input pathway         | Final status                            | Evidence                                                                              |
+| --------------------- | --------------------------------------- | ------------------------------------------------------------------------------------- |
+| File upload           | Works fully                             | Multi-file picker queues every accepted recording; covered by Playwright.             |
+| Drag and drop         | Works fully                             | Dropped files use the same multi-file queue path.                                     |
+| Paste from clipboard  | Works fully where browsers expose files | `Paste audio` uses permission-aware clipboard read; page paste accepts audio files.   |
+| Text/HTML paste       | Out of scope                            | ADR 0061.                                                                             |
+| Image paste           | Out of scope                            | ADR 0061.                                                                             |
+| URL input             | Out of scope                            | ADR 0061; UI explains CORS and points users to download/API paths.                    |
+| Clipboard read button | Works fully with fallback guidance      | Unsupported browsers get a domain explanation and alternate paths.                    |
+| Mobile picker         | Works fully within browser limits       | `audio/*`, common extensions, and `multiple` are enabled.                             |
+| Multi-file upload     | Works fully                             | Queue shows each file and status; Playwright covers two-file selection.               |
+| Folder upload         | Out of scope                            | ADR 0061.                                                                             |
+| Sample/demo input     | Works fully                             | Generated WAV sample is first-class and covered by Playwright.                        |
+| Deep links            | Works fully for small workspace state   | Hash state restores preferences/job metadata; oversized state points to file export.  |
+| Imported state        | Works fully                             | Versioned `.postline.json` import is covered by Playwright.                           |
+| Restored autosave     | Works fully for metadata/preferences    | Autosave restores workspace metadata and explicitly asks for audio file reattachment. |
+
+After count: green 10, yellow 0, red 0, out-of-scope 4.

@@ -10,7 +10,7 @@ Baseline date: 2026-05-10
 | Largest backend handler module | `internal/httpapi/handlers.go` has 433 lines and duplicates multipart staging between preflight and process.                                                                                                                                        |
 | DRY violations                 | Multipart upload parsing/staging appears in both `preflight` and `process`; frontend fallback filename and backend result filename use separate sanitizers; output/provenance state has no canonical schema.                                        |
 | SOLID violations               | `App.tsx` has several reasons to change: input acquisition, persistence, export actions, processing orchestration, and rendering.                                                                                                                   |
-| Dead code                      | No abandoned files found. `writeError` exists in `internal/httpapi/handlers.go` and is unused.                                                                                                                                                      |
+| Dead code                      | No abandoned files found. A quick audit flagged `writeError`, but it is used by the panic recoverer.                                                                                                                                                |
 | TODO/FIXME/XXX/HACK            | Zero TODO/FIXME/XXX/HACK markers in production source.                                                                                                                                                                                              |
 | Type safety holes              | Frontend API boundaries cast JSON responses directly with `as ProcessingPlan`, `as Provenance`, and `as DomainError`; `frontend/src/main.tsx` uses `as HTMLElement`; Go uses `any` in `audio.Result.Metrics`, map literals, tests, and `writeJSON`. |
 | Inconsistent patterns          | Frontend validates preferences with zod but does not validate API responses, provenance headers, or workspace state.                                                                                                                                |
@@ -39,5 +39,21 @@ Baseline date: 2026-05-10
 | Core DRY violations                              |     3 |
 | TODO/FIXME/XXX/HACK markers                      |     0 |
 | Type safety holes from direct `as` casts / `any` |     9 |
-| Dead code functions                              |     1 |
+| Dead code functions                              |     0 |
 | E2E real-user paths covered                      |     1 |
+
+## After Phase 3
+
+| Metric                                       | Count |
+| -------------------------------------------- | ----: |
+| Core DRY violations                          |     0 |
+| TODO/FIXME/XXX/HACK markers                  |     0 |
+| Type safety holes from direct boundary casts |     0 |
+| Dead code functions                          |     0 |
+| E2E real-user paths covered                  |     6 |
+
+Notes:
+
+- `frontend/src/App.tsx` is still the largest module and remains a Phase 4 refactor candidate, but Phase 3 moved file classification, workspace schema, storage, snippets, and API validation out of it.
+- Remaining `as` matches in source are import alias/text occurrences, not unsafe boundary casts.
+- Backend multipart staging and form parsing now have single helper paths.

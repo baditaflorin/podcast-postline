@@ -17,3 +17,21 @@ Baseline date: 2026-05-10
 | Round-trip import        | Not built       | There is no state export/import pair.                                                                               | A user cannot verify reproducibility outside the same tab.                          | Finish and test with deterministic state schema.                    |
 
 Before count: green 1, yellow 0, red 6, out-of-scope 4.
+
+## After Phase 3
+
+| Output pathway           | Final status              | Evidence                                                         |
+| ------------------------ | ------------------------- | ---------------------------------------------------------------- |
+| Processed audio download | Works fully               | Existing behavior preserved; process/provenance Playwright test. |
+| JSON export              | Works fully               | Provenance JSON can be copied or downloaded after processing.    |
+| CSV export               | Out of scope              | ADR 0062.                                                        |
+| Copy to clipboard        | Works fully with fallback | curl/provenance copy actions report clipboard state.             |
+| Downloadable state file  | Works fully               | `.postline.json` export covered by Playwright download test.     |
+| Share link               | Works fully               | Hash state covered by Playwright for a small workspace.          |
+| Print-friendly output    | Works fully               | Print CSS hides controls and keeps status/provenance content.    |
+| Screenshot export        | Out of scope              | ADR 0062.                                                        |
+| Embed code               | Out of scope              | ADR 0062.                                                        |
+| API/curl-ready output    | Works fully               | curl and Python snippets are generated from current settings.    |
+| Round-trip import        | Works fully               | Import/reset Playwright test covers the state path.              |
+
+After count: green 8, yellow 0, red 0, out-of-scope 3.

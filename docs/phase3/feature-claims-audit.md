@@ -17,3 +17,16 @@ Baseline date: 2026-05-10
 | In-app UI    | Publish-ready export.                                                   | Shipped partially | Audio download works; no provenance download or automation output.                                  | Finish output pathways.                                           |
 
 Before count: green 6, yellow 5, red 0.
+
+## After Phase 3
+
+| Claim                         | Final status              | Evidence                                                                              |
+| ----------------------------- | ------------------------- | ------------------------------------------------------------------------------------- |
+| Upload raw recordings         | Shipped fully             | Multi-file picker/drop/clipboard/sample/state import paths are implemented or scoped. |
+| Denoise/normalize/trim/export | Shipped fully             | Backend behavior preserved; smoke covers process path.                                |
+| Confidence in UI and exports  | Shipped fully             | Plan confidence is visible; provenance JSON/header is copyable/downloadable.          |
+| Debug surface                 | Shipped fully             | Queue/workspace/activity included.                                                    |
+| Session learning              | Shipped fully for session | Overrides are visible in debug/activity and exported in workspace state.              |
+| GHCR publication claim        | Shipped as operator docs  | README limitations call out required package write scope.                             |
+
+After count: green 11, yellow 0, red 0.
