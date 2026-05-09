@@ -11,6 +11,8 @@ cd "$ROOT"
 cleanup() {
   if [ -n "$SERVER_PID" ]; then
     kill "$SERVER_PID" >/dev/null 2>&1 || true
+    wait "$SERVER_PID" >/dev/null 2>&1 || true
+    SERVER_PID=""
   fi
 }
 trap cleanup EXIT INT TERM
@@ -21,22 +23,24 @@ PROCESSOR_MODE=stub PORT="$PORT" WORK_DIR="$TMP" CGO_ENABLED=0 go run ./cmd/serv
 SERVER_PID="$!"
 
 for _ in $(seq 1 40); do
-  if curl -fsS "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
+  if curl -fsS --max-time 5 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
     break
   fi
   sleep 0.25
 done
 
-curl -fsS "http://127.0.0.1:$PORT/readyz" >/dev/null
-curl -fsS "http://127.0.0.1:$PORT/api/version" >/dev/null
-curl -fsS "http://127.0.0.1:$PORT/metrics" >/dev/null
+curl -fsS --max-time 5 "http://127.0.0.1:$PORT/readyz" >/dev/null
+curl -fsS --max-time 5 "http://127.0.0.1:$PORT/api/version" >/dev/null
+curl -fsS --max-time 5 "http://127.0.0.1:$PORT/metrics" >/dev/null
 node -e "const fs=require('fs'); fs.writeFileSync(process.argv[1], Buffer.from([82,73,70,70,40,0,0,0,87,65,86,69,102,109,116,32,16,0,0,0,1,0,1,0,64,31,0,0,128,62,0,0,2,0,16,0,100,97,116,97,4,0,0,0,0,0,0,64]));" "$TMP/fake.wav"
 PREFLIGHT_JSON="$(curl -fsS \
+  --max-time 10 \
   -F "file=@$TMP/fake.wav;type=audio/wav" \
   -F "target_lufs=-16" \
   "http://127.0.0.1:$PORT/api/preflight")"
 printf '%s' "$PREFLIGHT_JSON" | grep -q '"plan_id"'
 curl -fsS \
+  --max-time 10 \
   -F "file=@$TMP/fake.wav;type=audio/wav" \
   -F "target_lufs=-16" \
   -F "format=mp3" \
@@ -54,4 +58,5 @@ else
   echo "npx not found; skipping Playwright smoke"
 fi
 
+cleanup
 echo "smoke ok"

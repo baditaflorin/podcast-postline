@@ -65,7 +65,7 @@ test-integration:
 	@echo "No integration suite is enabled by default. Use Docker to exercise the real audio toolchain."
 
 smoke:
-	scripts/smoke.sh
+	sh scripts/smoke.sh
 
 lint:
 	gofmt -w cmd internal
