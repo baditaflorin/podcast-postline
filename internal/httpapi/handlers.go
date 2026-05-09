@@ -269,6 +269,7 @@ func parseOptions(r *http.Request, plan *audio.ProcessingPlan) (audio.Options, e
 
 func (s *Server) stageUpload(w http.ResponseWriter, r *http.Request) (stagedUpload, bool) {
 	r.Body = http.MaxBytesReader(w, r.Body, s.cfg.MaxUploadBytes)
+	// #nosec G120 -- request body size is capped by http.MaxBytesReader before parsing.
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		writeDomainError(w, http.StatusBadRequest, audio.DomainError{
 			Code:        "invalid_upload",
