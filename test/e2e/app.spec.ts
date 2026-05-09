@@ -88,7 +88,7 @@ test("loads processing app with project links and build metadata", async ({
     "href",
     "https://www.paypal.com/paypalme/florinbadita",
   );
-  await expect(page.getByText(/^v0\.[23]\.0$/)).toBeVisible();
+  await expect(page.getByText(/^v0\.3\.0$/)).toBeVisible();
   await expect(page.getByText(/^commit /)).toBeVisible();
 });
 

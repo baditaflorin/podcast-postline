@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 
 APP_NAME := podcast-postline
-VERSION ?= 0.2.0
+VERSION ?= 0.3.0
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 CREATED ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 PAGES_URL := https://baditaflorin.github.io/podcast-postline/
