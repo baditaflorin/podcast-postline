@@ -33,4 +33,3 @@ The app remains small, but new completeness behavior no longer needs to live ent
 
 - Rewrite the frontend around a router/state machine library. Rejected because it would be architecture churn.
 - Leave the god component untouched. Rejected because Phase 3 adds input/output paths and would worsen the module.
-

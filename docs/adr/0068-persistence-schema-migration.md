@@ -30,4 +30,3 @@ Workspace export/import can be tested independently. Old missing workspace data 
 
 - Reuse preferences storage for everything. Rejected because preferences and workspace have different lifetimes.
 - Silently mutate unknown old state. Rejected because it risks wrong restoration.
-

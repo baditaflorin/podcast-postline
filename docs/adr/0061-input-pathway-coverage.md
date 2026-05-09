@@ -35,4 +35,3 @@ The UI must explain URL/CORS limits in audio terms instead of presenting a broke
 
 - Add a browser URL input. Rejected because it would fail for many real podcast hosts and cloud-drive links.
 - Add server URL ingestion. Rejected because it expands the backend threat model and is a new feature.
-

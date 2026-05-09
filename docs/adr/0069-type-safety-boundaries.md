@@ -27,4 +27,3 @@ Malformed backend or imported state produces actionable errors instead of corrup
 
 - Trust the backend because it is ours. Rejected because deployments and stale clients can drift.
 - Generate the OpenAPI client now. Rejected as larger than needed for Phase 3, but still valid future work.
-

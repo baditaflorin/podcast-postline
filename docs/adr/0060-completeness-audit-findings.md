@@ -30,4 +30,3 @@ The work prioritizes completing existing promises over adding new audio features
 
 - Treat Phase 3 as a UI polish pass. Rejected because the audits found workflow gaps, not aesthetic gaps.
 - Add more DSP options. Rejected because Phase 2 substance is locked.
-

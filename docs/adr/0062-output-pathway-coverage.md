@@ -34,4 +34,3 @@ Every exported non-audio artifact uses a deterministic schema with a version. Ra
 
 - Export every possible artifact format. Rejected because it would create untested surface.
 - Store audio blobs inside workspace JSON. Rejected because files can be large and browser memory limits vary.
-

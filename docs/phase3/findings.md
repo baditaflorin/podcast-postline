@@ -12,13 +12,13 @@ Baseline date: 2026-05-10
 
 ## Top 5 Half-Baked Features
 
-| Feature | Decision | Rationale |
-| --- | --- | --- |
-| Reset status | Finish | Current behavior resets only mutation state; users need explicit active-job reset and fresh-start reset. |
-| Session correction memory | Finish | It exists internally but is not visible or exported. |
-| Provenance display | Finish | It is visible, but cannot be downloaded/copied. |
-| Debug surface | Finish | It should include Phase 3 queue/state/export metadata. |
-| GHCR publication claim | Finish docs | The make target exists, but the docs need the package-token limitation. |
+| Feature                   | Decision    | Rationale                                                                                                |
+| ------------------------- | ----------- | -------------------------------------------------------------------------------------------------------- |
+| Reset status              | Finish      | Current behavior resets only mutation state; users need explicit active-job reset and fresh-start reset. |
+| Session correction memory | Finish      | It exists internally but is not visible or exported.                                                     |
+| Provenance display        | Finish      | It is visible, but cannot be downloaded/copied.                                                          |
+| Debug surface             | Finish      | It should include Phase 3 queue/state/export metadata.                                                   |
+| GHCR publication claim    | Finish docs | The make target exists, but the docs need the package-token limitation.                                  |
 
 ## Top 5 Codebase Pain Points
 
@@ -46,14 +46,14 @@ Baseline date: 2026-05-10
 
 ## Phase 3 Success Metrics
 
-| Metric | Target |
-| --- | ---: |
-| Input audit green or ADR-out-of-scope rows | 100% |
-| Output audit green or ADR-out-of-scope rows | 100% |
-| Core DRY violations remaining | 0 |
-| Production TODO/FIXME/XXX/HACK markers | 0 |
-| Frontend API boundary direct casts | 0 |
-| Real-user E2E paths | At least 4 |
+| Metric                                           |             Target |
+| ------------------------------------------------ | -----------------: |
+| Input audit green or ADR-out-of-scope rows       |               100% |
+| Output audit green or ADR-out-of-scope rows      |               100% |
+| Core DRY violations remaining                    |                  0 |
+| Production TODO/FIXME/XXX/HACK markers           |                  0 |
+| Frontend API boundary direct casts               |                  0 |
+| Real-user E2E paths                              |         At least 4 |
 | Workspace export/import deterministic round-trip | 100% in unit tests |
 
 ## Out of Scope
@@ -63,4 +63,3 @@ Baseline date: 2026-05-10
 - No architecture escalation beyond Mode C.
 - No arbitrary URL fetching from the browser because CORS and credentials make it unreliable for v1.
 - No folder recursion, CSV export, embed codes, screenshot export, or image/text processing.
-

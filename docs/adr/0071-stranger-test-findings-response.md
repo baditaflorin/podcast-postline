@@ -29,4 +29,3 @@ This is not as strong as another human tester, so the postmortem must say that p
 
 - Skip because no external tester is present. Rejected; the prompt allows a self-run private-browser substitute.
 - Wait for confirmation. Rejected by autonomous Phase 3 mode.
-

@@ -26,4 +26,3 @@ Boundary validation failures become visible, not silently coerced. Clipboard uns
 
 - Let thrown exceptions surface through React. Rejected because users need recovery steps.
 - Add a global toast system now. Rejected as polish; inline status is enough for Phase 3.
-

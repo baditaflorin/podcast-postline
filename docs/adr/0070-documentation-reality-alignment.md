@@ -27,4 +27,3 @@ The public repo stops overpromising. Missing features users do not see are less 
 
 - Leave docs aspirational. Rejected because Phase 3’s purpose is trust.
 - Document only architecture. Rejected because strangers need workflow truth.
-

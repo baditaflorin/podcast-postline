@@ -25,4 +25,3 @@ Upload validation changes happen in one place. Workspace import/export/deep-link
 
 - Leave small duplication alone. Rejected for upload staging because it touches security and error behavior.
 - Introduce a large application framework. Rejected as unnecessary for this scale.
-

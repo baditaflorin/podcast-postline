@@ -22,4 +22,3 @@ Reload can restore meaningful context without promising impossible restoration o
 
 - Persist raw audio blobs in IndexedDB. Rejected for v0.3 because storage quotas and file sizes vary widely.
 - Add Redux or another state library. Rejected because the state remains local to one page.
-
