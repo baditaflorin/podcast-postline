@@ -563,7 +563,7 @@ export function App() {
       activity,
     });
     const hash = encodeWorkspaceHash(snapshot);
-    if (hash.length > 1800) {
+    if (hash.length > 8000) {
       setGlobalError(
         "This workspace is too large for a reliable share link. Download the state file instead.",
       );
@@ -845,7 +845,7 @@ export function App() {
                   aria-hidden="true"
                   size={18}
                 />
-                Inspecting duration, channels, silence, and format before any
+                Inspecting duration, channels, silence, and format before
                 processing starts.
               </div>
             ) : null}
