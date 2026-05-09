@@ -42,7 +42,7 @@ func (p StubProcessor) Process(ctx context.Context, inputPath string, originalNa
 		Path:        outputPath,
 		Filename:    filepath.Base(outputPath),
 		ContentType: ContentType(options.Format),
-		Metrics: map[string]any{
+		Metrics: map[string]interface{}{
 			"processor":       "stub",
 			"target_lufs":     options.TargetLUFS,
 			"denoise":         options.Denoise,

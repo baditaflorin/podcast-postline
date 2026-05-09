@@ -20,12 +20,12 @@ type Options struct {
 	PreserveStereo bool    `json:"preserve_stereo"`
 }
 
-// Result describes a processed export and any temporary paths to remove.
+// Result describes a processed export and temporary paths to remove.
 type Result struct {
 	Path         string
 	Filename     string
 	ContentType  string
-	Metrics      map[string]any
+	Metrics      map[string]interface{}
 	CleanupPaths []string
 }
 

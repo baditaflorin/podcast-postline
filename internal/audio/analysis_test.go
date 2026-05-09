@@ -112,7 +112,7 @@ func warningCodeSet(plan ProcessingPlan) map[string]bool {
 	return codes
 }
 
-func mustJSON(t *testing.T, value any) string {
+func mustJSON(t *testing.T, value interface{}) string {
 	t.Helper()
 	body, err := json.Marshal(value)
 	if err != nil {

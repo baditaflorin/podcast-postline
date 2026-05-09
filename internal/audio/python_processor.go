@@ -73,7 +73,7 @@ func (p PythonProcessor) Process(ctx context.Context, inputPath string, original
 		return Result{}, fmt.Errorf("run audio pipeline: %w: %s", err, stderr.String())
 	}
 
-	metrics := map[string]any{}
+	metrics := map[string]interface{}{}
 	if stdout.Len() > 0 {
 		if err := json.Unmarshal(stdout.Bytes(), &metrics); err != nil {
 			_ = os.RemoveAll(dir)

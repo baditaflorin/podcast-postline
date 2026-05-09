@@ -4,7 +4,6 @@ package httpapi
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -33,6 +32,12 @@ type versionResponse struct {
 	Date    string `json:"date"`
 }
 
+type stagedUpload struct {
+	Path     string
+	Filename string
+	Cleanup  func()
+}
+
 func (s *Server) healthz(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
@@ -50,47 +55,13 @@ func (s *Server) version(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) preflight(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, s.cfg.MaxUploadBytes)
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		writeDomainError(w, http.StatusBadRequest, audio.DomainError{
-			Code:        "invalid_upload",
-			What:        "Upload was not readable",
-			Why:         "The request was not a valid multipart audio upload.",
-			Next:        "Choose one audio file and try again.",
-			Recoverable: true,
-		})
+	upload, ok := s.stageUpload(w, r)
+	if !ok {
 		return
 	}
-	defer removeMultipart(r)
+	defer upload.Cleanup()
 
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		writeDomainError(w, http.StatusBadRequest, audio.DomainError{
-			Code:        "missing_file",
-			What:        "No recording was uploaded",
-			Why:         "The request did not include a file field.",
-			Next:        "Choose a WAV, MP3, M4A, or FLAC recording.",
-			Recoverable: true,
-		})
-		return
-	}
-	defer func() { _ = file.Close() }()
-
-	inputPath, cleanup, err := saveUpload(s.cfg.WorkDir, header.Filename, file)
-	if err != nil {
-		s.logger.Error("save preflight upload failed", "error", err)
-		writeDomainError(w, http.StatusInternalServerError, audio.DomainError{
-			Code:        "upload_save_failed",
-			What:        "Could not stage the recording",
-			Why:         "The backend could not write the upload to temporary storage.",
-			Next:        "Try again or check server disk space.",
-			Recoverable: true,
-		})
-		return
-	}
-	defer cleanup()
-
-	profile, err := s.analyzer.Analyze(r.Context(), inputPath, header.Filename)
+	profile, err := s.analyzer.Analyze(r.Context(), upload.Path, upload.Filename)
 	if err != nil {
 		s.logger.Error("preflight analyze failed", "error", err)
 		writeDomainError(w, http.StatusBadRequest, audio.DomainError{
@@ -103,59 +74,23 @@ func (s *Server) preflight(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target := -16.0
-	if raw := strings.TrimSpace(r.FormValue("target_lufs")); raw != "" {
-		value, err := strconv.ParseFloat(raw, 64)
-		if err == nil {
-			target = value
-		}
+	target, err := parseFloatForm(r, "target_lufs", -16)
+	if err != nil {
+		writeDomainError(w, http.StatusBadRequest, invalidOptionsError(err))
+		return
 	}
 	plan := audio.InferPlan(profile, target, s.cfg.MaxUploadBytes)
 	writeJSON(w, http.StatusOK, plan)
 }
 
 func (s *Server) process(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, s.cfg.MaxUploadBytes)
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		writeDomainError(w, http.StatusBadRequest, audio.DomainError{
-			Code:        "invalid_upload",
-			What:        "Upload was not readable",
-			Why:         "The request was not a valid multipart audio upload.",
-			Next:        "Choose one audio file and try again.",
-			Recoverable: true,
-		})
+	upload, ok := s.stageUpload(w, r)
+	if !ok {
 		return
 	}
-	defer removeMultipart(r)
+	defer upload.Cleanup()
 
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		writeDomainError(w, http.StatusBadRequest, audio.DomainError{
-			Code:        "missing_file",
-			What:        "No recording was uploaded",
-			Why:         "The request did not include a file field.",
-			Next:        "Choose a WAV, MP3, M4A, or FLAC recording.",
-			Recoverable: true,
-		})
-		return
-	}
-	defer func() { _ = file.Close() }()
-
-	inputPath, cleanup, err := saveUpload(s.cfg.WorkDir, header.Filename, file)
-	if err != nil {
-		s.logger.Error("save upload failed", "error", err)
-		writeDomainError(w, http.StatusInternalServerError, audio.DomainError{
-			Code:        "upload_save_failed",
-			What:        "Could not stage the recording",
-			Why:         "The backend could not write the upload to temporary storage.",
-			Next:        "Try again or check server disk space.",
-			Recoverable: true,
-		})
-		return
-	}
-	defer cleanup()
-
-	profile, err := s.analyzer.Analyze(r.Context(), inputPath, header.Filename)
+	profile, err := s.analyzer.Analyze(r.Context(), upload.Path, upload.Filename)
 	if err != nil {
 		s.logger.Error("process analyze failed", "error", err)
 		writeDomainError(w, http.StatusBadRequest, audio.DomainError{
@@ -197,7 +132,7 @@ func (s *Server) process(w http.ResponseWriter, r *http.Request) {
 	plan := audio.InferPlan(profile, options.TargetLUFS, s.cfg.MaxUploadBytes)
 
 	start := time.Now()
-	result, err := s.processor.Process(r.Context(), inputPath, header.Filename, options)
+	result, err := s.processor.Process(r.Context(), upload.Path, upload.Filename, options)
 	s.metrics.ObserveAudio(options.Format, time.Since(start), err == nil)
 	if err != nil {
 		s.logger.Error("audio processing failed", "error", err)
@@ -243,7 +178,7 @@ func (s *Server) process(w http.ResponseWriter, r *http.Request) {
 
 	filename := result.Filename
 	if filename == "" {
-		filename = audio.ResultFilename(header.Filename, options.Format)
+		filename = audio.ResultFilename(upload.Filename, options.Format)
 	}
 	contentType := result.ContentType
 	if contentType == "" {
@@ -296,44 +231,30 @@ func parseOptions(r *http.Request, plan *audio.ProcessingPlan) (audio.Options, e
 		normalize = plan.Recommended.Normalize
 		preserveStereo = plan.Recommended.PreserveStereo
 	}
-	if raw := strings.TrimSpace(r.FormValue("target_lufs")); raw != "" {
-		value, err := strconv.ParseFloat(raw, 64)
-		if err != nil {
-			return audio.Options{}, errors.New("target_lufs must be numeric")
-		}
-		targetLUFS = value
+	var err error
+	targetLUFS, err = parseFloatForm(r, "target_lufs", targetLUFS)
+	if err != nil {
+		return audio.Options{}, err
 	}
 
 	if raw := strings.ToLower(strings.TrimSpace(r.FormValue("format"))); raw != "" {
 		format = raw
 	}
-	if raw := strings.TrimSpace(r.FormValue("trim_silence")); raw != "" {
-		value, err := strconv.ParseBool(raw)
-		if err != nil {
-			return audio.Options{}, errors.New("trim_silence must be true or false")
-		}
-		trimSilence = value
+	trimSilence, err = parseBoolForm(r, "trim_silence", trimSilence)
+	if err != nil {
+		return audio.Options{}, err
 	}
-	if raw := strings.TrimSpace(r.FormValue("denoise")); raw != "" {
-		value, err := strconv.ParseBool(raw)
-		if err != nil {
-			return audio.Options{}, errors.New("denoise must be true or false")
-		}
-		denoise = value
+	denoise, err = parseBoolForm(r, "denoise", denoise)
+	if err != nil {
+		return audio.Options{}, err
 	}
-	if raw := strings.TrimSpace(r.FormValue("normalize")); raw != "" {
-		value, err := strconv.ParseBool(raw)
-		if err != nil {
-			return audio.Options{}, errors.New("normalize must be true or false")
-		}
-		normalize = value
+	normalize, err = parseBoolForm(r, "normalize", normalize)
+	if err != nil {
+		return audio.Options{}, err
 	}
-	if raw := strings.TrimSpace(r.FormValue("preserve_stereo")); raw != "" {
-		value, err := strconv.ParseBool(raw)
-		if err != nil {
-			return audio.Options{}, errors.New("preserve_stereo must be true or false")
-		}
-		preserveStereo = value
+	preserveStereo, err = parseBoolForm(r, "preserve_stereo", preserveStereo)
+	if err != nil {
+		return audio.Options{}, err
 	}
 
 	return audio.NormalizeOptions(audio.Options{
@@ -344,6 +265,83 @@ func parseOptions(r *http.Request, plan *audio.ProcessingPlan) (audio.Options, e
 		Normalize:      normalize,
 		PreserveStereo: preserveStereo,
 	}), nil
+}
+
+func (s *Server) stageUpload(w http.ResponseWriter, r *http.Request) (stagedUpload, bool) {
+	r.Body = http.MaxBytesReader(w, r.Body, s.cfg.MaxUploadBytes)
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		writeDomainError(w, http.StatusBadRequest, audio.DomainError{
+			Code:        "invalid_upload",
+			What:        "Upload was not readable",
+			Why:         "The request was not a valid multipart audio upload.",
+			Next:        "Choose one audio file and try again.",
+			Recoverable: true,
+		})
+		return stagedUpload{}, false
+	}
+	defer removeMultipart(r)
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeDomainError(w, http.StatusBadRequest, audio.DomainError{
+			Code:        "missing_file",
+			What:        "No recording was uploaded",
+			Why:         "The request did not include a file field.",
+			Next:        "Choose a WAV, MP3, M4A, or FLAC recording.",
+			Recoverable: true,
+		})
+		return stagedUpload{}, false
+	}
+	defer func() { _ = file.Close() }()
+
+	inputPath, cleanup, err := saveUpload(s.cfg.WorkDir, header.Filename, file)
+	if err != nil {
+		s.logger.Error("save upload failed", "error", err)
+		writeDomainError(w, http.StatusInternalServerError, audio.DomainError{
+			Code:        "upload_save_failed",
+			What:        "Could not stage the recording",
+			Why:         "The backend could not write the upload to temporary storage.",
+			Next:        "Try again or check server disk space.",
+			Recoverable: true,
+		})
+		return stagedUpload{}, false
+	}
+
+	return stagedUpload{Path: inputPath, Filename: header.Filename, Cleanup: cleanup}, true
+}
+
+func parseFloatForm(r *http.Request, name string, fallback float64) (float64, error) {
+	raw := strings.TrimSpace(r.FormValue(name))
+	if raw == "" {
+		return fallback, nil
+	}
+	value, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be numeric", name)
+	}
+	return value, nil
+}
+
+func parseBoolForm(r *http.Request, name string, fallback bool) (bool, error) {
+	raw := strings.TrimSpace(r.FormValue(name))
+	if raw == "" {
+		return fallback, nil
+	}
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		return false, fmt.Errorf("%s must be true or false", name)
+	}
+	return value, nil
+}
+
+func invalidOptionsError(err error) audio.DomainError {
+	return audio.DomainError{
+		Code:        "invalid_options",
+		What:        "Processing settings are invalid",
+		Why:         err.Error(),
+		Next:        "Use the recommended settings or choose a target between -30 and -6 LUFS.",
+		Recoverable: true,
+	}
 }
 
 func saveUpload(workDir, filename string, reader io.Reader) (string, func(), error) {
@@ -373,7 +371,7 @@ func saveUpload(workDir, filename string, reader io.Reader) (string, func(), err
 	return path, func() { _ = os.RemoveAll(dir) }, nil
 }
 
-func writeJSON(w http.ResponseWriter, status int, value any) {
+func writeJSON(w http.ResponseWriter, status int, value interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
