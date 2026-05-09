@@ -1,9 +1,11 @@
 import {
-  DomainError,
   ProcessingPlan,
   ProcessAudioInput,
   ProcessAudioResult,
   Provenance,
+  domainErrorSchema,
+  processingPlanSchema,
+  provenanceSchema,
 } from "./types";
 
 export async function preflightAudio({
@@ -32,7 +34,8 @@ export async function preflightAudio({
     throw new Error(await responseMessage(response));
   }
 
-  return (await response.json()) as ProcessingPlan;
+  const body = await response.json();
+  return parseProcessingPlan(body);
 }
 
 export async function processAudio({
@@ -95,13 +98,15 @@ function fallbackFilename(name: string, format: string) {
 async function responseMessage(response: Response) {
   const contentType = response.headers.get("Content-Type") ?? "";
   if (contentType.includes("application/json")) {
-    const body = (await response
-      .json()
-      .catch(() => null)) as DomainError | null;
-    if (body?.what && body?.why && body?.next) {
-      return `${body.what}. ${body.why} ${body.next}`;
+    const body = await response.json().catch(() => null);
+    const parsed = domainErrorSchema.safeParse(body);
+    if (parsed.success) {
+      const error = parsed.data;
+      if (error.what && error.why && error.next) {
+        return `${error.what}. ${error.why} ${error.next}`;
+      }
+      if (error.error) return error.error;
     }
-    if (body?.error) return body.error;
   }
   return `Request failed with HTTP ${response.status}`;
 }
@@ -114,8 +119,18 @@ function provenanceFromHeader(header: string | null): Provenance | null {
       "=",
     );
     const json = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json) as Provenance;
+    return provenanceSchema.parse(JSON.parse(json));
   } catch {
     return null;
   }
+}
+
+function parseProcessingPlan(value: unknown): ProcessingPlan {
+  const parsed = processingPlanSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error(
+      "Preflight returned data this version cannot safely read. Refresh the app and try again.",
+    );
+  }
+  return parsed.data;
 }

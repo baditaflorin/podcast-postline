@@ -23,7 +23,13 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
   });
 }
 
-createRoot(document.getElementById("root") as HTMLElement).render(
+const root = document.getElementById("root");
+
+if (!root) {
+  throw new Error("App root element was not found.");
+}
+
+createRoot(root).render(
   <React.StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

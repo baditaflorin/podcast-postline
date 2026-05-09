@@ -2,11 +2,19 @@ import {
   AlertTriangle,
   BadgeDollarSign,
   CheckCircle2,
+  Clipboard,
+  Code2,
+  Copy,
   Download,
+  FileAudio,
+  FileJson,
   Github,
   Info,
+  Link,
   Loader2,
+  Printer,
   RefreshCcw,
+  RotateCcw,
   ShieldCheck,
   SlidersHorizontal,
   Square,
@@ -15,19 +23,55 @@ import {
   Wand2,
   X,
 } from "lucide-react";
-import { ChangeEvent, DragEvent, useMemo, useRef, useState } from "react";
+import {
+  ChangeEvent,
+  ClipboardEvent as ReactClipboardEvent,
+  DragEvent,
+  useMemo,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { z } from "zod";
+import {
+  audioFilesFromList,
+  classifyAudioFile,
+  createDemoWavFile,
+  filesFromPaste,
+  readClipboardAudioFiles,
+  stableFileId,
+} from "./features/processor/fileInput";
 import { preflightAudio } from "./features/processor/api";
-import { loadPreferences, savePreferences } from "./features/processor/storage";
+import {
+  clearWorkspace,
+  defaultPreferences,
+  loadPreferences,
+  loadWorkspace,
+  savePreferences,
+  saveWorkspace,
+} from "./features/processor/storage";
+import { curlSnippet, pythonSnippet } from "./features/processor/snippets";
 import {
   ExportFormat,
   Issue,
   ProcessingPlan,
-  processOptionsSchema,
   ProcessPreferences,
   Provenance,
+  exportFormats,
+  processOptionsSchema,
 } from "./features/processor/types";
 import { useProcessAudio } from "./features/processor/useProcessAudio";
+import {
+  ActivityEntry,
+  JobSnapshot,
+  WorkspaceSnapshot,
+  createWorkspaceSnapshot,
+  decodeWorkspaceHash,
+  encodeWorkspaceHash,
+  parseWorkspace,
+  stableWorkspaceJson,
+  workspaceFilename,
+} from "./features/processor/workspace";
 import { appEnv } from "./lib/env";
 import { formatBytes, shortCommit } from "./lib/format";
 
@@ -41,6 +85,8 @@ const fileSchema = z
 
 type AppState =
   | "idle"
+  | "queued"
+  | "restored"
   | "selected"
   | "preflighting"
   | "ready"
@@ -52,6 +98,8 @@ type AppState =
 
 const appStateLabels: Record<AppState, string> = {
   idle: "Waiting for audio",
+  queued: "Queued",
+  restored: "Reattach audio",
   selected: "Audio selected",
   preflighting: "Inspecting audio",
   ready: "Ready",
@@ -64,56 +112,144 @@ const appStateLabels: Record<AppState, string> = {
 
 type SessionOverrides = Partial<Omit<ProcessPreferences, "apiBaseUrl">>;
 
+type AudioJob = {
+  id: string;
+  file: File | null;
+  name: string;
+  size: number;
+  type: string;
+  lastModified: number;
+  formatGuess: string;
+  inputConfidence: number;
+  inputWarning: string | null;
+  status: AppState;
+  plan: ProcessingPlan | null;
+  provenance: Provenance | null;
+  downloadUrl: string | null;
+  downloadName: string;
+  error: string | null;
+  preflightError: string | null;
+};
+
 export function App() {
   const initialPreferences = useMemo(
     () => loadPreferences(appEnv.apiBaseUrl),
     [],
   );
+  const initialWorkspace = useMemo(() => {
+    const fromHash = decodeWorkspaceHash(window.location.hash);
+    return fromHash ?? loadWorkspace();
+  }, []);
   const debugEnabled = useMemo(
     () => new URLSearchParams(window.location.search).get("debug") === "1",
     [],
   );
-  const [preferences, setPreferences] =
-    useState<ProcessPreferences>(initialPreferences);
-  const [sessionOverrides, setSessionOverrides] = useState<SessionOverrides>(
-    {},
+  const [preferences, setPreferences] = useState<ProcessPreferences>(
+    initialWorkspace?.preferences ?? initialPreferences,
   );
-  const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
-  const [preflightError, setPreflightError] = useState<string | null>(null);
-  const [plan, setPlan] = useState<ProcessingPlan | null>(null);
-  const [provenance, setProvenance] = useState<Provenance | null>(null);
-  const [appState, setAppState] = useState<AppState>("idle");
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [downloadName, setDownloadName] = useState<string>(
-    "episode-postline.mp3",
+  const [sessionOverrides, setSessionOverrides] = useState<SessionOverrides>(
+    initialWorkspace?.session_overrides ?? {},
+  );
+  const [jobs, setJobs] = useState<AudioJob[]>(
+    initialWorkspace ? jobsFromSnapshot(initialWorkspace.jobs) : [],
+  );
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(
+    initialWorkspace?.selected_job_id ?? initialWorkspace?.jobs[0]?.id ?? null,
+  );
+  const [activity, setActivity] = useState<ActivityEntry[]>(
+    initialWorkspace?.activity ?? [],
+  );
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [clipboardStatus, setClipboardStatus] = useState<string | null>(null);
+  const [restoreNotice, setRestoreNotice] = useState<string | null>(
+    initialWorkspace
+      ? "Workspace metadata was restored. Reattach original audio files before processing."
+      : null,
   );
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const importRef = useRef<HTMLInputElement | null>(null);
   const preflightAbortRef = useRef<AbortController | null>(null);
   const processAbortRef = useRef<AbortController | null>(null);
+  const processingJobIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    saveWorkspace(
+      buildSnapshot({
+        preferences,
+        jobs,
+        selectedJobId,
+        sessionOverrides,
+        activity,
+      }),
+    );
+  }, [activity, jobs, preferences, selectedJobId, sessionOverrides]);
+
+  const activeJob = jobs.find((job) => job.id === selectedJobId) ?? null;
+  const appState = activeJob?.status ?? "idle";
+  const plan = activeJob?.plan ?? null;
+  const provenance = activeJob?.provenance ?? null;
+  const activeFile = activeJob?.file ?? null;
+  const selectedFileMeta = activeJob
+    ? `${activeJob.name} - ${formatBytes(activeJob.size)}`
+    : "WAV, MP3, M4A, FLAC";
+  const busy = appState === "preflighting" || appState === "processing";
+  const blocked = appState === "blocked";
+  const canProcess =
+    Boolean(activeFile) && !busy && !blocked && appState !== "queued";
+  const allIssues = plan ? [...plan.anomalies, ...plan.warnings] : [];
+  const apiBaseUrlValid = z
+    .string()
+    .url()
+    .safeParse(preferences.apiBaseUrl).success;
+  const activeSnippetName = activeJob?.name ?? "episode.wav";
+  const curlCommand = curlSnippet(activeSnippetName, preferences);
+  const pythonCommand = pythonSnippet(activeSnippetName, preferences);
 
   const mutation = useProcessAudio({
     onSuccess: (result) => {
-      if (downloadUrl) {
-        URL.revokeObjectURL(downloadUrl);
-      }
-      setDownloadUrl(result.url);
-      setDownloadName(result.filename);
-      setProvenance(result.provenance);
-      setAppState("processed");
+      const jobId = processingJobIdRef.current;
       processAbortRef.current = null;
+      processingJobIdRef.current = null;
+      if (!jobId) return;
+      setJobs((current) =>
+        current.map((job) => {
+          if (job.id !== jobId) return job;
+          if (job.downloadUrl) URL.revokeObjectURL(job.downloadUrl);
+          return {
+            ...job,
+            downloadUrl: result.url,
+            downloadName: result.filename,
+            provenance: result.provenance,
+            status: "processed",
+            error: null,
+          };
+        }),
+      );
+      addActivity(`Processed ${result.filename}.`);
     },
     onError: (error) => {
+      const jobId = processingJobIdRef.current;
       processAbortRef.current = null;
-      if (error.name === "AbortError") {
-        setFileError(
-          "Processing was cancelled. The original upload is unchanged.",
-        );
-        setAppState(plan ? stateFromPlan(plan) : "selected");
-        return;
-      }
-      setFileError(error.message);
-      setAppState("error-recoverable");
+      processingJobIdRef.current = null;
+      if (!jobId) return;
+      setJobs((current) =>
+        current.map((job) => {
+          if (job.id !== jobId) return job;
+          if (error.name === "AbortError") {
+            return {
+              ...job,
+              error:
+                "Processing was cancelled. The original upload is unchanged.",
+              status: job.plan ? stateFromPlan(job.plan) : "selected",
+            };
+          }
+          return {
+            ...job,
+            error: error.message,
+            status: "error-recoverable",
+          };
+        }),
+      );
     },
   });
 
@@ -125,45 +261,129 @@ export function App() {
   const updateUserPreference = (patch: Partial<ProcessPreferences>) => {
     const next = { ...preferences, ...patch };
     updatePreferences(next);
-    const remembered = { ...patch };
-    delete remembered.apiBaseUrl;
-    setSessionOverrides((current) => ({
-      ...current,
-      ...(remembered as SessionOverrides),
-    }));
+    const remembered = sessionOverridePatch(patch);
+    setSessionOverrides((current) => ({ ...current, ...remembered }));
+    addActivity("Updated processing settings.");
   };
 
-  const selectedFileMeta = file
-    ? `${file.name} - ${formatBytes(file.size)}`
-    : "WAV, MP3, M4A, FLAC";
-  const busy = appState === "preflighting" || appState === "processing";
-  const blocked = appState === "blocked";
-  const canProcess = Boolean(file) && !busy && !blocked && !mutation.isPending;
-  const allIssues = plan ? [...plan.anomalies, ...plan.warnings] : [];
+  const saveCurrentWorkspace = (nextJobs = jobs) => {
+    const snapshot = buildSnapshot({
+      preferences,
+      jobs: nextJobs,
+      selectedJobId,
+      sessionOverrides,
+      activity,
+    });
+    saveWorkspace(snapshot);
+    return snapshot;
+  };
+
+  const addFiles = (files: File[], source: string) => {
+    setGlobalError(null);
+    setRestoreNotice(null);
+    const accepted: AudioJob[] = [];
+    const rejected: string[] = [];
+    const existingIds = new Set(jobs.map((job) => job.id));
+
+    for (const file of files) {
+      const parsed = fileSchema.safeParse(file);
+      if (!parsed.success) {
+        rejected.push(
+          `${file.name}: ${parsed.error.issues[0]?.message ?? "Invalid file."}`,
+        );
+        continue;
+      }
+      const finding = classifyAudioFile(file);
+      const id = stableFileId(file, existingIds);
+      existingIds.add(id);
+      accepted.push({
+        id,
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+        formatGuess: finding.format,
+        inputConfidence: finding.confidence,
+        inputWarning: finding.warning,
+        status: "queued",
+        plan: null,
+        provenance: null,
+        downloadUrl: null,
+        downloadName: fallbackDownloadName(file.name, preferences.format),
+        error: finding.warning,
+        preflightError: null,
+      });
+    }
+
+    if (rejected.length > 0) {
+      setGlobalError(rejected.join(" "));
+    }
+    if (accepted.length === 0) {
+      if (files.length === 0) {
+        setGlobalError(
+          "No audio files were found. Use WAV, MP3, M4A, or FLAC.",
+        );
+      }
+      return;
+    }
+
+    setJobs((current) => {
+      const next = [...current, ...accepted];
+      saveCurrentWorkspace(next);
+      return next;
+    });
+    addActivity(`Added ${accepted.length} recording(s) from ${source}.`);
+
+    if (!activeJob || activeJob.status === "restored") {
+      const first = accepted[0];
+      setSelectedJobId(first.id);
+      runPreflight(first);
+    }
+  };
 
   const runPreflight = (
-    nextFile: File,
+    job: AudioJob,
     currentPreferences: ProcessPreferences = preferences,
   ) => {
+    if (!job.file) {
+      patchJob(job.id, {
+        status: "restored",
+        error:
+          "Reattach the original audio file before preflight or processing.",
+      });
+      return;
+    }
+
     preflightAbortRef.current?.abort();
     const controller = new AbortController();
     preflightAbortRef.current = controller;
-    setPlan(null);
-    setPreflightError(null);
-    setFileError(null);
-    setProvenance(null);
-    setAppState("preflighting");
+    patchJob(job.id, {
+      plan: null,
+      preflightError: null,
+      error: null,
+      provenance: null,
+      status: "preflighting",
+    });
 
     void preflightAudio({
-      file: nextFile,
+      file: job.file,
       apiBaseUrl: currentPreferences.apiBaseUrl,
       targetLufs: currentPreferences.targetLufs,
       signal: controller.signal,
     })
       .then((nextPlan) => {
         if (controller.signal.aborted) return;
-        setPlan(nextPlan);
-        setAppState(stateFromPlan(nextPlan));
+        patchJob(job.id, {
+          plan: nextPlan,
+          status: stateFromPlan(nextPlan),
+          error: null,
+          preflightError: null,
+          downloadName: fallbackDownloadName(
+            job.name,
+            nextPlan.recommended.format,
+          ),
+        });
         updatePreferences({
           ...currentPreferences,
           targetLufs: nextPlan.recommended.target_lufs,
@@ -174,6 +394,7 @@ export function App() {
           preserveStereo: nextPlan.recommended.preserve_stereo,
           ...sessionOverrides,
         });
+        addActivity(`Preflight completed for ${job.name}.`);
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
@@ -181,9 +402,11 @@ export function App() {
           error instanceof Error
             ? error.message
             : "Could not inspect the recording.";
-        setPreflightError(message);
-        setFileError(message);
-        setAppState("error-recoverable");
+        patchJob(job.id, {
+          preflightError: message,
+          error: message,
+          status: "error-recoverable",
+        });
       })
       .finally(() => {
         if (preflightAbortRef.current === controller) {
@@ -192,88 +415,229 @@ export function App() {
       });
   };
 
-  const selectFile = (nextFile: File | null) => {
-    preflightAbortRef.current?.abort();
-    processAbortRef.current?.abort();
-    mutation.reset();
-    if (downloadUrl) {
-      URL.revokeObjectURL(downloadUrl);
-      setDownloadUrl(null);
-    }
-    setDownloadName("episode-postline.mp3");
-    setFileError(null);
-    setPreflightError(null);
-    setPlan(null);
-    setProvenance(null);
-    if (!nextFile) {
-      setFile(null);
-      setAppState("idle");
-      if (inputRef.current) inputRef.current.value = "";
+  const chooseJob = (job: AudioJob) => {
+    if (busy) {
+      setGlobalError(
+        "Finish or cancel the current operation before switching recordings.",
+      );
       return;
     }
-    const parsed = fileSchema.safeParse(nextFile);
-    if (!parsed.success) {
-      setFile(null);
-      setFileError(parsed.error.issues[0]?.message ?? "Invalid file.");
-      setAppState("error-recoverable");
-      return;
+    setSelectedJobId(job.id);
+    setGlobalError(null);
+    if (job.file && (job.status === "queued" || job.status === "selected")) {
+      runPreflight(job);
     }
-    setFile(nextFile);
-    setAppState("selected");
-    runPreflight(nextFile);
-  };
-
-  const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
-    event.preventDefault();
-    selectFile(event.dataTransfer.files.item(0));
-  };
-
-  const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
-    selectFile(event.target.files?.item(0) ?? null);
   };
 
   const process = () => {
-    if (!file) {
-      setFileError("Choose an audio file first.");
+    if (!activeJob || !activeJob.file) {
+      setGlobalError("Choose or reattach an audio file first.");
       return;
     }
-    if (plan?.status === "blocked") {
-      setFileError(
-        "This recording is blocked because the app cannot make a safe processing plan.",
-      );
-      setAppState("blocked");
+    if (activeJob.plan?.status === "blocked") {
+      patchJob(activeJob.id, {
+        error:
+          "This recording is blocked because the app cannot make a safe processing plan.",
+        status: "blocked",
+      });
       return;
     }
     const parsed = processOptionsSchema.safeParse(preferences);
     if (!parsed.success) {
-      setFileError(parsed.error.issues[0]?.message ?? "Invalid settings.");
-      setAppState("error-recoverable");
+      patchJob(activeJob.id, {
+        error: parsed.error.issues[0]?.message ?? "Invalid settings.",
+        status: "error-recoverable",
+      });
       return;
     }
     const controller = new AbortController();
     processAbortRef.current = controller;
-    setFileError(null);
-    setAppState("processing");
-    mutation.mutate({ file, options: parsed.data, signal: controller.signal });
+    processingJobIdRef.current = activeJob.id;
+    patchJob(activeJob.id, { error: null, status: "processing" });
+    mutation.mutate({
+      file: activeJob.file,
+      options: parsed.data,
+      signal: controller.signal,
+    });
   };
 
   const cancelCurrentWork = () => {
-    if (appState === "preflighting") {
+    if (!activeJob) return;
+    if (activeJob.status === "preflighting") {
       preflightAbortRef.current?.abort();
       preflightAbortRef.current = null;
-      setFileError(
-        "Preflight was cancelled. The selected recording is intact.",
-      );
-      setAppState(file ? "selected" : "idle");
+      patchJob(activeJob.id, {
+        error: "Preflight was cancelled. The selected recording is intact.",
+        status: activeJob.file ? "selected" : "restored",
+      });
       return;
     }
-    if (appState === "processing") {
+    if (activeJob.status === "processing") {
       processAbortRef.current?.abort();
       processAbortRef.current = null;
-      setFileError(
-        "Processing was cancelled. The original upload is unchanged.",
+      patchJob(activeJob.id, {
+        error: "Processing was cancelled. The original upload is unchanged.",
+        status: activeJob.plan ? stateFromPlan(activeJob.plan) : "selected",
+      });
+    }
+  };
+
+  const clearActiveJob = () => {
+    if (!activeJob) return;
+    revokeJob(activeJob);
+    const remaining = jobs.filter((job) => job.id !== activeJob.id);
+    setJobs(remaining);
+    setSelectedJobId(remaining[0]?.id ?? null);
+    addActivity(`Removed ${activeJob.name} from the queue.`);
+  };
+
+  const startFresh = () => {
+    preflightAbortRef.current?.abort();
+    processAbortRef.current?.abort();
+    for (const job of jobs) revokeJob(job);
+    const nextPreferences = defaultPreferences(appEnv.apiBaseUrl);
+    setJobs([]);
+    setSelectedJobId(null);
+    setActivity([]);
+    setSessionOverrides({});
+    setPreferences(nextPreferences);
+    setGlobalError(null);
+    setClipboardStatus(null);
+    setRestoreNotice(null);
+    clearWorkspace();
+    savePreferences(nextPreferences);
+    mutation.reset();
+  };
+
+  const exportWorkspace = () => {
+    const snapshot = buildSnapshot({
+      preferences,
+      jobs,
+      selectedJobId,
+      sessionOverrides,
+      activity,
+    });
+    downloadText(
+      workspaceFilename(snapshot),
+      stableWorkspaceJson(snapshot),
+      "application/json",
+    );
+    saveWorkspace(snapshot);
+    addActivity("Downloaded workspace state.");
+  };
+
+  const importWorkspace = async (file: File) => {
+    try {
+      const snapshot = parseWorkspace(JSON.parse(await file.text()));
+      restoreWorkspace(
+        snapshot,
+        "Imported workspace state. Reattach original audio files before processing.",
       );
-      setAppState(plan ? stateFromPlan(plan) : "selected");
+    } catch {
+      setGlobalError(
+        "Workspace import failed. Choose a valid .postline.json export from this app.",
+      );
+    }
+  };
+
+  const restoreWorkspace = (snapshot: WorkspaceSnapshot, notice: string) => {
+    for (const job of jobs) revokeJob(job);
+    setPreferences(snapshot.preferences);
+    savePreferences(snapshot.preferences);
+    setSessionOverrides(snapshot.session_overrides);
+    setJobs(jobsFromSnapshot(snapshot.jobs));
+    setSelectedJobId(snapshot.selected_job_id ?? snapshot.jobs[0]?.id ?? null);
+    setActivity(snapshot.activity);
+    setRestoreNotice(notice);
+    setGlobalError(null);
+    saveWorkspace(snapshot);
+    addActivity("Restored workspace metadata.");
+  };
+
+  const shareWorkspace = async () => {
+    const snapshot = buildSnapshot({
+      preferences,
+      jobs,
+      selectedJobId,
+      sessionOverrides,
+      activity,
+    });
+    const hash = encodeWorkspaceHash(snapshot);
+    if (hash.length > 1800) {
+      setGlobalError(
+        "This workspace is too large for a reliable share link. Download the state file instead.",
+      );
+      return;
+    }
+    const url = `${window.location.origin}${window.location.pathname}#${hash}`;
+    window.history.replaceState(null, "", `#${hash}`);
+    await copyText("Share link", url);
+    addActivity("Created share link.");
+  };
+
+  const copyText = async (label: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setClipboardStatus(`${label} copied.`);
+    } catch {
+      setClipboardStatus(
+        `${label} is visible below. Select it manually if clipboard permission is blocked.`,
+      );
+    }
+  };
+
+  const copyProvenance = async () => {
+    if (!provenance) return;
+    await copyText(
+      "Provenance JSON",
+      `${JSON.stringify(provenance, null, 2)}\n`,
+    );
+  };
+
+  const downloadProvenance = () => {
+    if (!provenance) return;
+    downloadText(
+      `${activeSnippetName.replace(/\.[^.]+$/, "") || "episode"}.provenance.json`,
+      `${JSON.stringify(provenance, null, 2)}\n`,
+      "application/json",
+    );
+    addActivity("Downloaded provenance JSON.");
+  };
+
+  const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    addFiles(audioFilesFromList(event.dataTransfer.files), "drag/drop");
+  };
+
+  const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
+    addFiles(Array.from(event.target.files ?? []), "file picker");
+    event.currentTarget.value = "";
+  };
+
+  const handleImportInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.item(0);
+    if (file) void importWorkspace(file);
+    event.currentTarget.value = "";
+  };
+
+  const handlePaste = (event: ReactClipboardEvent<HTMLElement>) => {
+    const files = filesFromPaste(event.nativeEvent);
+    if (files.length === 0) return;
+    event.preventDefault();
+    addFiles(files, "clipboard paste");
+  };
+
+  const loadDemo = () => addFiles([createDemoWavFile()], "generated sample");
+
+  const readClipboard = async () => {
+    try {
+      addFiles(await readClipboardAudioFiles(), "clipboard read");
+    } catch (error) {
+      setGlobalError(
+        error instanceof Error
+          ? error.message
+          : "Clipboard read failed. Use paste, drag/drop, or the file picker.",
+      );
     }
   };
 
@@ -296,7 +660,10 @@ export function App() {
   ];
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(145deg,#f6f1e8_0%,#edf5f1_48%,#f8e9df_100%)] text-stone-950">
+    <main
+      className="min-h-screen bg-[linear-gradient(145deg,#f6f1e8_0%,#edf5f1_48%,#f8e9df_100%)] text-stone-950"
+      onPaste={handlePaste}
+    >
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-950/10 pb-4">
           <div>
@@ -337,19 +704,63 @@ export function App() {
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Input</p>
-                <h2>Raw recording</h2>
+                <h2>Raw recordings</h2>
               </div>
-              {file ? (
+              {activeJob ? (
                 <button
                   className="icon-button"
                   type="button"
-                  onClick={() => selectFile(null)}
-                  title="Clear file"
+                  onClick={clearActiveJob}
+                  title="Remove active recording"
+                  disabled={busy}
                 >
                   <X aria-hidden="true" size={18} />
                 </button>
               ) : null}
             </div>
+
+            <div className="input-actions" aria-label="Input actions">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={loadDemo}
+              >
+                <FileAudio aria-hidden="true" size={18} />
+                Sample
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={readClipboard}
+              >
+                <Clipboard aria-hidden="true" size={18} />
+                Paste audio
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => importRef.current?.click()}
+              >
+                <FileJson aria-hidden="true" size={18} />
+                Import state
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={startFresh}
+              >
+                <RotateCcw aria-hidden="true" size={18} />
+                Start fresh
+              </button>
+            </div>
+
+            <input
+              ref={importRef}
+              className="sr-only"
+              type="file"
+              accept="application/json,.json,.postline.json"
+              onChange={handleImportInput}
+            />
 
             <label
               className="drop-zone"
@@ -367,18 +778,64 @@ export function App() {
                 ref={inputRef}
                 className="sr-only"
                 type="file"
-                accept="audio/*"
+                accept="audio/*,.wav,.mp3,.m4a,.flac"
+                multiple
                 onChange={handleFileInput}
               />
               <UploadCloud aria-hidden="true" size={34} />
-              <span>{file ? "Selected file" : "Drop audio or browse"}</span>
+              <span>
+                {activeJob ? "Active recording" : "Drop audio or browse"}
+              </span>
               <strong>{selectedFileMeta}</strong>
             </label>
 
-            {fileError ? (
-              <p className="error-text" aria-live="polite">
-                {fileError}
+            <p className="guidance-text">
+              Browser URL imports are intentionally not shown: many podcast
+              hosts and cloud drives block cross-origin audio fetches. Download
+              the recording first, or use the API snippet from your server.
+            </p>
+
+            {restoreNotice ? (
+              <p className="notice-text" aria-live="polite">
+                {restoreNotice}
               </p>
+            ) : null}
+            {globalError ? (
+              <p className="error-text" aria-live="polite">
+                {globalError}
+              </p>
+            ) : null}
+            {activeJob?.error ? (
+              <p className="error-text" aria-live="polite">
+                {activeJob.error}
+              </p>
+            ) : null}
+
+            {jobs.length > 0 ? (
+              <section className="queue-panel" aria-label="Recording queue">
+                <div className="queue-header">
+                  <strong>{jobs.length} recording(s)</strong>
+                  <span>Process one active recording at a time.</span>
+                </div>
+                <ul>
+                  {jobs.map((job) => (
+                    <li key={job.id}>
+                      <button
+                        type="button"
+                        className={job.id === selectedJobId ? "active" : ""}
+                        onClick={() => chooseJob(job)}
+                        disabled={busy && job.id !== selectedJobId}
+                      >
+                        <span>{job.name}</span>
+                        <small>
+                          {appStateLabels[job.status]} -{" "}
+                          {Math.round(job.inputConfidence * 100)}% input match
+                        </small>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ) : null}
 
             {appState === "preflighting" ? (
@@ -393,11 +850,11 @@ export function App() {
               </div>
             ) : null}
 
-            {preflightError && file ? (
+            {activeJob?.preflightError && activeJob.file ? (
               <button
                 className="secondary-button"
                 type="button"
-                onClick={() => runPreflight(file)}
+                onClick={() => runPreflight(activeJob)}
               >
                 <RefreshCcw aria-hidden="true" size={18} />
                 Retry preflight
@@ -450,7 +907,7 @@ export function App() {
                   role="radiogroup"
                   aria-label="Export format"
                 >
-                  {(["mp3", "wav", "m4a"] as ExportFormat[]).map((format) => (
+                  {exportFormats.map((format) => (
                     <button
                       key={format}
                       type="button"
@@ -522,6 +979,7 @@ export function App() {
                 <input
                   type="url"
                   value={preferences.apiBaseUrl}
+                  aria-invalid={!apiBaseUrlValid}
                   onChange={(event) =>
                     updatePreferences({
                       ...preferences,
@@ -529,6 +987,11 @@ export function App() {
                     })
                   }
                 />
+                {!apiBaseUrlValid ? (
+                  <small>
+                    Use a complete URL such as http://localhost:8080.
+                  </small>
+                ) : null}
               </label>
             </div>
 
@@ -539,7 +1002,7 @@ export function App() {
                 disabled={!canProcess}
                 onClick={process}
               >
-                {mutation.isPending || appState === "processing" ? (
+                {appState === "processing" ? (
                   <Loader2
                     className="animate-spin"
                     aria-hidden="true"
@@ -548,9 +1011,7 @@ export function App() {
                 ) : (
                   <Wand2 aria-hidden="true" size={18} />
                 )}
-                {mutation.isPending || appState === "processing"
-                  ? "Processing"
-                  : "Run postline"}
+                {appState === "processing" ? "Processing" : "Run postline"}
               </button>
               {busy ? (
                 <button
@@ -576,13 +1037,20 @@ export function App() {
                 type="button"
                 onClick={() => {
                   mutation.reset();
-                  setFileError(null);
-                  setAppState(
-                    plan ? stateFromPlan(plan) : file ? "selected" : "idle",
-                  );
+                  setGlobalError(null);
+                  if (activeJob) {
+                    patchJob(activeJob.id, {
+                      error: null,
+                      status: activeJob.plan
+                        ? stateFromPlan(activeJob.plan)
+                        : activeJob.file
+                          ? "selected"
+                          : "restored",
+                    });
+                  }
                 }}
-                title="Reset status"
-                disabled={busy}
+                title="Reset active status"
+                disabled={busy || !activeJob}
               >
                 <RefreshCcw aria-hidden="true" size={18} />
               </button>
@@ -627,18 +1095,14 @@ export function App() {
               ))}
             </ol>
 
-            {mutation.error && appState !== "processing" ? (
-              <p className="error-box">{mutation.error.message}</p>
-            ) : null}
-
-            {downloadUrl ? (
+            {activeJob?.downloadUrl ? (
               <a
                 className="download-button"
-                href={downloadUrl}
-                download={downloadName}
+                href={activeJob.downloadUrl}
+                download={activeJob.downloadName}
               >
                 <Download aria-hidden="true" size={18} />
-                Download {downloadName}
+                Download {activeJob.downloadName}
               </a>
             ) : (
               <div className="empty-output">
@@ -647,17 +1111,99 @@ export function App() {
               </div>
             )}
 
+            <div className="output-actions" aria-label="Output actions">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={exportWorkspace}
+              >
+                <FileJson aria-hidden="true" size={18} />
+                Download state
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={shareWorkspace}
+              >
+                <Link aria-hidden="true" size={18} />
+                Share state
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={downloadProvenance}
+                disabled={!provenance}
+              >
+                <Download aria-hidden="true" size={18} />
+                Provenance
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={copyProvenance}
+                disabled={!provenance}
+              >
+                <Copy aria-hidden="true" size={18} />
+                Copy JSON
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => void copyText("curl command", curlCommand)}
+              >
+                <Code2 aria-hidden="true" size={18} />
+                Copy curl
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => window.print()}
+              >
+                <Printer aria-hidden="true" size={18} />
+                Print
+              </button>
+            </div>
+
+            {clipboardStatus ? (
+              <p className="notice-text" aria-live="polite">
+                {clipboardStatus}
+              </p>
+            ) : null}
+
+            <details className="snippet-panel">
+              <summary>Automation snippets</summary>
+              <strong>curl</strong>
+              <pre>{curlCommand}</pre>
+              <strong>Python</strong>
+              <pre>{pythonCommand}</pre>
+            </details>
+
             {provenance ? <ProvenanceSummary provenance={provenance} /> : null}
+
+            {activity.length > 0 ? (
+              <section className="activity-panel">
+                <strong>Activity</strong>
+                <ol>
+                  {activity.slice(0, 6).map((entry) => (
+                    <li key={entry.id}>
+                      <span>{entry.message}</span>
+                      <small>{new Date(entry.at).toLocaleString()}</small>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ) : null}
 
             {debugEnabled ? (
               <pre className="debug-panel">
                 {JSON.stringify(
                   {
                     appState,
-                    plan,
+                    jobs: jobs.map(jobToSnapshot),
                     provenance,
                     preferences,
                     sessionOverrides,
+                    activity,
                   },
                   null,
                   2,
@@ -674,6 +1220,26 @@ export function App() {
       </div>
     </main>
   );
+
+  function patchJob(id: string, patch: Partial<AudioJob>) {
+    setJobs((current) =>
+      current.map((job) => (job.id === id ? { ...job, ...patch } : job)),
+    );
+  }
+
+  function addActivity(message: string) {
+    setActivity((current) => {
+      const next = [
+        {
+          id: `${Date.now()}-${current.length + 1}`,
+          at: new Date().toISOString(),
+          message,
+        },
+        ...current,
+      ].slice(0, 50);
+      return next;
+    });
+  }
 }
 
 function PlanSummary({
@@ -768,4 +1334,106 @@ function formatDuration(seconds: number) {
   if (hours > 0) return `${hours}h ${minutes}m`;
   if (minutes > 0) return `${minutes}m ${secs}s`;
   return `${secs}s`;
+}
+
+function fallbackDownloadName(name: string, format: string) {
+  const base = name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9._-]+/g, "-");
+  return `${base || "episode"}-postline.${format}`;
+}
+
+function sessionOverridePatch(
+  patch: Partial<ProcessPreferences>,
+): SessionOverrides {
+  return {
+    ...(patch.targetLufs === undefined ? {} : { targetLufs: patch.targetLufs }),
+    ...(patch.format === undefined ? {} : { format: patch.format }),
+    ...(patch.trimSilence === undefined
+      ? {}
+      : { trimSilence: patch.trimSilence }),
+    ...(patch.denoise === undefined ? {} : { denoise: patch.denoise }),
+    ...(patch.normalize === undefined ? {} : { normalize: patch.normalize }),
+    ...(patch.preserveStereo === undefined
+      ? {}
+      : { preserveStereo: patch.preserveStereo }),
+  };
+}
+
+function jobsFromSnapshot(snapshots: JobSnapshot[]): AudioJob[] {
+  return snapshots.map((job) => ({
+    id: job.id,
+    file: null,
+    name: job.name,
+    size: job.size,
+    type: job.type,
+    lastModified: job.last_modified,
+    formatGuess: job.format_guess,
+    inputConfidence: job.confidence,
+    inputWarning: job.warning,
+    status: "restored",
+    plan: job.plan,
+    provenance: job.provenance,
+    downloadUrl: null,
+    downloadName: fallbackDownloadName(
+      job.name,
+      job.plan?.recommended.format ?? "mp3",
+    ),
+    error:
+      "Workspace metadata restored. Reattach this audio file to process again.",
+    preflightError: null,
+  }));
+}
+
+function jobToSnapshot(job: AudioJob) {
+  return {
+    id: job.id,
+    name: job.name,
+    size: job.size,
+    type: job.type,
+    lastModified: job.lastModified,
+    formatGuess: job.formatGuess,
+    confidence: job.inputConfidence,
+    status: job.status,
+    warning: job.inputWarning,
+    error: job.error,
+    plan: job.plan,
+    provenance: job.provenance,
+  };
+}
+
+function buildSnapshot({
+  preferences,
+  jobs,
+  selectedJobId,
+  sessionOverrides,
+  activity,
+}: {
+  preferences: ProcessPreferences;
+  jobs: AudioJob[];
+  selectedJobId: string | null;
+  sessionOverrides: SessionOverrides;
+  activity: ActivityEntry[];
+}) {
+  return createWorkspaceSnapshot({
+    appVersion: appEnv.version,
+    commit: appEnv.commit,
+    preferences,
+    selectedJobId,
+    jobs: jobs.map(jobToSnapshot),
+    sessionOverrides,
+    activity,
+  });
+}
+
+function revokeJob(job: AudioJob) {
+  if (job.downloadUrl) URL.revokeObjectURL(job.downloadUrl);
+}
+
+function downloadText(filename: string, body: string, type: string) {
+  const blob = new Blob([body], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
