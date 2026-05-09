@@ -26,4 +26,3 @@ The plan exposes an overall confidence plus per-warning confidence. Confidence i
 ## Alternatives Considered
 
 - Binary pass/fail: rejected because many podcast inputs are usable but risky.
-

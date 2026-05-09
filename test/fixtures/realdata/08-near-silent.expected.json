@@ -1,1 +1,12 @@
-{"status":"blocked","plan_label":"Silent or unusable recording","overall_confidence_min":0.9,"must_recommend":{"denoise":false,"normalize":false,"trim_silence":false,"preserve_stereo":false},"must_warn":["silent_recording"]}
+{
+  "status": "blocked",
+  "plan_label": "Silent or unusable recording",
+  "overall_confidence_min": 0.9,
+  "must_recommend": {
+    "denoise": false,
+    "normalize": false,
+    "trim_silence": false,
+    "preserve_stereo": false
+  },
+  "must_warn": ["silent_recording"]
+}

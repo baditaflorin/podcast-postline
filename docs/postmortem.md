@@ -54,4 +54,3 @@ Yes. In hindsight Mode C is still the right v1 choice. Mode A would have forced 
 Estimated: 4-6 hours for a production-grade scaffold and v1 happy path.
 
 Actual: about 2 hours for implementation, docs, local checks, Pages publishing, and smoke verification in this environment.
-

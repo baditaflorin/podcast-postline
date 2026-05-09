@@ -8,6 +8,9 @@ export function loadPreferences(defaultApiBaseUrl: string): ProcessPreferences {
     targetLufs: -16,
     format: "mp3",
     trimSilence: true,
+    denoise: true,
+    normalize: true,
+    preserveStereo: false,
   };
 
   try {

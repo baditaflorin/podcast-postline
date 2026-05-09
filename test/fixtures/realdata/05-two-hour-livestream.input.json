@@ -1,1 +1,19 @@
-{"id":"05-two-hour-livestream","original_name":"two-hour-livestream-vbr.mp3","size_bytes":178000000,"format":"mp3","mime":"audio/mpeg","duration_seconds":7200,"channels":2,"sample_rate_hz":44100,"bit_depth":0,"integrated_lufs":-23.7,"peak_dbfs":-2.8,"noise_floor_dbfs":-55,"silence_ratio":0.26,"speech_ratio":0.8,"music_ratio":0.02,"decode_state":"ok","notes":"Long VBR livestream export with long pauses."}
+{
+  "id": "05-two-hour-livestream",
+  "original_name": "two-hour-livestream-vbr.mp3",
+  "size_bytes": 178000000,
+  "format": "mp3",
+  "mime": "audio/mpeg",
+  "duration_seconds": 7200,
+  "channels": 2,
+  "sample_rate_hz": 44100,
+  "bit_depth": 0,
+  "integrated_lufs": -23.7,
+  "peak_dbfs": -2.8,
+  "noise_floor_dbfs": -55,
+  "silence_ratio": 0.26,
+  "speech_ratio": 0.8,
+  "music_ratio": 0.02,
+  "decode_state": "ok",
+  "notes": "Long VBR livestream export with long pauses."
+}

@@ -22,4 +22,3 @@ No hidden personalization, accounts, server-side learning, or cross-device learn
 ## Alternatives Considered
 
 - Server-side learning: rejected as out of scope and privacy-sensitive.
-

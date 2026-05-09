@@ -27,4 +27,3 @@ The real native pipeline remains synchronous in v2, but the UI and API surface r
 ## Alternatives Considered
 
 - Full async job queue: valuable but treated as Phase 3 because it widens architecture/operations.
-

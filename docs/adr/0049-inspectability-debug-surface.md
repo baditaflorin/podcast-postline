@@ -20,4 +20,3 @@ Use `?debug=1` to reveal a debug panel with preflight JSON, provenance, warnings
 ## Alternatives Considered
 
 - Always show raw JSON: rejected because it distracts normal users.
-

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: podcast-postline API
-  version: 0.1.0
+  version: 0.2.0
   description: API-only backend for podcast denoise, loudness normalization, silence trimming, and export.
 servers:
   - url: http://localhost:8080
@@ -68,6 +68,15 @@ paths:
                 trim_silence:
                   type: boolean
                   default: true
+                denoise:
+                  type: boolean
+                  default: true
+                normalize:
+                  type: boolean
+                  default: true
+                preserve_stereo:
+                  type: boolean
+                  default: false
       responses:
         "200":
           description: Processed audio export.
@@ -76,6 +85,18 @@ paths:
               schema:
                 type: string
             X-Postline-Version:
+              schema:
+                type: string
+            X-Postline-Provenance:
+              schema:
+                type: string
+            X-Postline-Confidence:
+              schema:
+                type: string
+            X-Postline-Plan:
+              schema:
+                type: string
+            X-Postline-Warnings:
               schema:
                 type: string
           content:
@@ -87,3 +108,171 @@ paths:
           description: Invalid request.
         "502":
           description: Audio processing failed.
+  /api/preflight:
+    post:
+      summary: Inspect one recording and return a deterministic processing plan
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                target_lufs:
+                  type: number
+                  default: -16
+                  minimum: -30
+                  maximum: -6
+      responses:
+        "200":
+          description: Inferred media profile and recommended processing plan.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessingPlan"
+        "400":
+          description: Upload could not be inspected.
+components:
+  schemas:
+    Issue:
+      type: object
+      required: [code, severity, message, why, next, confidence]
+      properties:
+        code:
+          type: string
+        severity:
+          type: string
+          enum: [warning, blocker]
+        message:
+          type: string
+        why:
+          type: string
+        next:
+          type: string
+        confidence:
+          type: number
+    MediaProfile:
+      type: object
+      required:
+        - original_name
+        - size_bytes
+        - format
+        - mime
+        - duration_seconds
+        - channels
+        - sample_rate_hz
+        - bit_depth
+        - integrated_lufs
+        - peak_dbfs
+        - noise_floor_dbfs
+        - silence_ratio
+        - speech_ratio
+        - music_ratio
+        - decode_state
+      properties:
+        id:
+          type: string
+        original_name:
+          type: string
+        size_bytes:
+          type: integer
+        format:
+          type: string
+        mime:
+          type: string
+        duration_seconds:
+          type: number
+        channels:
+          type: integer
+        sample_rate_hz:
+          type: integer
+        bit_depth:
+          type: integer
+        integrated_lufs:
+          type: number
+        peak_dbfs:
+          type: number
+        noise_floor_dbfs:
+          type: number
+        silence_ratio:
+          type: number
+        speech_ratio:
+          type: number
+        music_ratio:
+          type: number
+        dc_offset:
+          type: number
+        decode_state:
+          type: string
+        fingerprint_sha256:
+          type: string
+        notes:
+          type: string
+    PlanOptions:
+      type: object
+      required:
+        - target_lufs
+        - format
+        - trim_silence
+        - denoise
+        - normalize
+        - preserve_stereo
+      properties:
+        target_lufs:
+          type: number
+        format:
+          type: string
+          enum: [mp3, wav, m4a]
+        trim_silence:
+          type: boolean
+        denoise:
+          type: boolean
+        normalize:
+          type: boolean
+        preserve_stereo:
+          type: boolean
+    ProcessingPlan:
+      type: object
+      required:
+        - schema_version
+        - plan_id
+        - status
+        - label
+        - confidence
+        - profile
+        - recommended
+        - warnings
+        - anomalies
+        - reasons
+      properties:
+        schema_version:
+          type: string
+        plan_id:
+          type: string
+        status:
+          type: string
+          enum: [ready, needs_review, blocked]
+        label:
+          type: string
+        confidence:
+          type: number
+        profile:
+          $ref: "#/components/schemas/MediaProfile"
+        recommended:
+          $ref: "#/components/schemas/PlanOptions"
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Issue"
+        anomalies:
+          type: array
+          items:
+            $ref: "#/components/schemas/Issue"
+        reasons:
+          type: array
+          items:
+            type: string

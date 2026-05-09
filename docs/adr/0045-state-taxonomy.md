@@ -22,4 +22,3 @@ Every state has an exit. Processing and preflight requests are cancellable with 
 ## Alternatives Considered
 
 - Reuse only TanStack mutation flags: rejected because domain states are richer than network flags.
-

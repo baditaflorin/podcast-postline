@@ -38,6 +38,38 @@ func TestRealDataFixturesInferExpectedPlans(t *testing.T) {
 	}
 }
 
+func TestSyntheticEdgeProfilesDoNotCrash(t *testing.T) {
+	edges := []MediaProfile{
+		{ID: "edge-empty", OriginalName: "empty.wav", Format: "wav", DecodeState: "empty", SizeBytes: 0},
+		{ID: "edge-huge", OriginalName: "huge.wav", Format: "wav", DecodeState: "ok", SizeBytes: 9_000_000_000, DurationSeconds: 28_800},
+		{ID: "edge-truncated", OriginalName: "half-upload.mp3", Format: "mp3", DecodeState: "truncated", SizeBytes: 4096},
+		{ID: "edge-unknown-format", OriginalName: "audio.bin", Format: "bin", DecodeState: "unknown", SizeBytes: 100_000},
+		{ID: "edge-unicode", OriginalName: "interview_nbsp_\u00a0.wav", Format: "wav", DecodeState: "ok", SizeBytes: 256_000, Channels: 1, SampleRateHz: 48000},
+	}
+
+	for _, profile := range edges {
+		t.Run(profile.ID, func(t *testing.T) {
+			plan := InferPlan(profile, -16, 750*1024*1024)
+			if plan.PlanID == "" {
+				t.Fatal("plan id is required")
+			}
+			if plan.Status == "" {
+				t.Fatal("status is required")
+			}
+		})
+	}
+}
+
+func BenchmarkInferRealDataFixtures(b *testing.B) {
+	fixtures := loadFixtures(b)
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		for _, fixture := range fixtures {
+			_ = InferPlan(fixture.profile, -16, 750*1024*1024)
+		}
+	}
+}
+
 func assertPlan(t *testing.T, plan ProcessingPlan, expected expectedPlan) {
 	t.Helper()
 	if plan.Status != expected.Status {
@@ -94,7 +126,7 @@ type fixturePair struct {
 	expected expectedPlan
 }
 
-func loadFixtures(t *testing.T) []fixturePair {
+func loadFixtures(t testing.TB) []fixturePair {
 	t.Helper()
 	dir := filepath.Join("..", "..", "test", "fixtures", "realdata")
 	inputs, err := filepath.Glob(filepath.Join(dir, "*.input.json"))

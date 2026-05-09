@@ -32,4 +32,3 @@ Rules produce a `ProcessingPlan` with recommended options, warnings, anomalies, 
 
 - Machine-learning classifier: rejected for v2 because explainable deterministic behavior is higher value.
 - Keep fixed defaults: rejected because it fails stereo, music, mastered, silent, and huge fixtures.
-

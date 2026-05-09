@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -110,6 +109,9 @@ func (a FileAnalyzer) Analyze(_ context.Context, inputPath string, originalName 
 		return MediaProfile{}, err
 	}
 	profile.FingerprintSHA256 = fingerprint
+	if len(fingerprint) >= 12 {
+		profile.ID = "sha256-" + fingerprint[:12]
+	}
 
 	if profile.SizeBytes == 0 {
 		profile.DecodeState = "empty"
@@ -290,7 +292,11 @@ func planID(plan ProcessingPlan) string {
 		codes = append(codes, issue.Code)
 	}
 	sort.Strings(codes)
-	input := strings.Join([]string{plan.Profile.ID, plan.Profile.OriginalName, plan.Status, plan.Label, strings.Join(codes, ",")}, "|")
+	sourceID := plan.Profile.ID
+	if sourceID == "" {
+		sourceID = plan.Profile.FingerprintSHA256
+	}
+	input := strings.Join([]string{sourceID, plan.Profile.OriginalName, plan.Status, plan.Label, strings.Join(codes, ",")}, "|")
 	sum := sha256.Sum256([]byte(input))
 	return hex.EncodeToString(sum[:])[:12]
 }
@@ -326,9 +332,6 @@ func defaultFormat(format string) string {
 }
 
 func mimeFromName(name string) string {
-	if value := http.DetectContentType([]byte(filepath.Ext(name))); value != "application/octet-stream" {
-		return value
-	}
 	return ContentType(strings.TrimPrefix(strings.ToLower(filepath.Ext(name)), "."))
 }
 

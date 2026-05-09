@@ -8,6 +8,9 @@ describe("processOptionsSchema", () => {
       targetLufs: -16,
       format: "mp3",
       trimSilence: true,
+      denoise: true,
+      normalize: true,
+      preserveStereo: false,
     });
 
     expect(parsed.success).toBe(true);
@@ -19,6 +22,9 @@ describe("processOptionsSchema", () => {
       targetLufs: -16,
       format: "ogg",
       trimSilence: true,
+      denoise: true,
+      normalize: true,
+      preserveStereo: false,
     });
 
     expect(parsed.success).toBe(false);

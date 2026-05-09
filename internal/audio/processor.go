@@ -12,12 +12,12 @@ import (
 
 // Options configures one audio processing request.
 type Options struct {
-	TargetLUFS     float64 `validate:"gte=-30,lte=-6"`
-	Format         string  `validate:"oneof=mp3 wav m4a"`
-	TrimSilence    bool
-	Denoise        bool
-	Normalize      bool
-	PreserveStereo bool
+	TargetLUFS     float64 `json:"target_lufs" validate:"gte=-30,lte=-6"`
+	Format         string  `json:"format" validate:"oneof=mp3 wav m4a"`
+	TrimSilence    bool    `json:"trim_silence"`
+	Denoise        bool    `json:"denoise"`
+	Normalize      bool    `json:"normalize"`
+	PreserveStereo bool    `json:"preserve_stereo"`
 }
 
 // Result describes a processed export and any temporary paths to remove.

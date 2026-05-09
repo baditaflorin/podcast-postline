@@ -1,1 +1,17 @@
-{"status":"needs_review","plan_label":"Long episode with pauses","overall_confidence_min":0.7,"must_recommend":{"denoise":false,"normalize":true,"trim_silence":true,"preserve_stereo":true},"must_warn":["long_running_job","many_pauses","stereo_preserved","denoise_skipped_for_stereo"]}
+{
+  "status": "needs_review",
+  "plan_label": "Long episode with pauses",
+  "overall_confidence_min": 0.7,
+  "must_recommend": {
+    "denoise": false,
+    "normalize": true,
+    "trim_silence": true,
+    "preserve_stereo": true
+  },
+  "must_warn": [
+    "long_running_job",
+    "many_pauses",
+    "stereo_preserved",
+    "denoise_skipped_for_stereo"
+  ]
+}

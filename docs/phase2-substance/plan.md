@@ -44,4 +44,3 @@ Ranked by user impact on the 10 real-data fixtures.
 5. Backend fixture and determinism tests.
 6. Frontend preflight, states, progress, cancellation, and debug surface.
 7. Documentation, pass-rate tracking, postmortem, version bump.
-

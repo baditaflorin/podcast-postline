@@ -1,1 +1,12 @@
-{"status":"needs_review","plan_label":"Recover quiet noisy speech","overall_confidence_min":0.72,"must_recommend":{"denoise":true,"normalize":true,"trim_silence":true,"preserve_stereo":false},"must_warn":["large_gain","high_noise_floor"]}
+{
+  "status": "needs_review",
+  "plan_label": "Recover quiet noisy speech",
+  "overall_confidence_min": 0.72,
+  "must_recommend": {
+    "denoise": true,
+    "normalize": true,
+    "trim_silence": true,
+    "preserve_stereo": false
+  },
+  "must_warn": ["large_gain", "high_noise_floor"]
+}

@@ -24,4 +24,3 @@ Success means at least 7 of 10 fixtures produce a usable processing plan without
 
 - Commit large real recordings: rejected due size, licensing, and contributor friction.
 - Use synthetic happy-path samples only: rejected because it would preserve the Phase 1 toy behavior.
-

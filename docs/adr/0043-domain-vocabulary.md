@@ -25,4 +25,3 @@ Errors follow what/why/now-what. Inference reasons are short and specific.
 ## Alternatives Considered
 
 - Generic technical errors: rejected as unactionable.
-

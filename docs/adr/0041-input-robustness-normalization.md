@@ -29,4 +29,3 @@ Boundary validation rejects empty, too-large, truncated, or silent files before 
 
 - Let FFmpeg fail inside processing: rejected because errors are late and generic.
 - Require users to configure file properties manually: rejected because Phase 2 substance means the app infers obvious facts.
-

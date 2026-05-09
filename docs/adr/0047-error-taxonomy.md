@@ -28,4 +28,3 @@ API JSON errors use this shape, and frontend messages render it directly.
 ## Alternatives Considered
 
 - Keep `{"error":"..."}` only: rejected as insufficient for Phase 2.
-

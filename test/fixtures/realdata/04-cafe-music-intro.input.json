@@ -1,1 +1,19 @@
-{"id":"04-cafe-music-intro","original_name":"cafe-intro-then-interview.wav","size_bytes":128000000,"format":"wav","mime":"audio/wav","duration_seconds":900,"channels":2,"sample_rate_hz":48000,"bit_depth":24,"integrated_lufs":-19.1,"peak_dbfs":-1.6,"noise_floor_dbfs":-38,"silence_ratio":0.02,"speech_ratio":0.58,"music_ratio":0.28,"decode_state":"ok","notes":"Field interview with an intentional music/ambience intro."}
+{
+  "id": "04-cafe-music-intro",
+  "original_name": "cafe-intro-then-interview.wav",
+  "size_bytes": 128000000,
+  "format": "wav",
+  "mime": "audio/wav",
+  "duration_seconds": 900,
+  "channels": 2,
+  "sample_rate_hz": 48000,
+  "bit_depth": 24,
+  "integrated_lufs": -19.1,
+  "peak_dbfs": -1.6,
+  "noise_floor_dbfs": -38,
+  "silence_ratio": 0.02,
+  "speech_ratio": 0.58,
+  "music_ratio": 0.28,
+  "decode_state": "ok",
+  "notes": "Field interview with an intentional music/ambience intro."
+}

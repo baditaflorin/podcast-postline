@@ -1,1 +1,19 @@
-{"id":"06-already-mastered","original_name":"published-episode.mp3","size_bytes":66000000,"format":"mp3","mime":"audio/mpeg","duration_seconds":2400,"channels":2,"sample_rate_hz":44100,"bit_depth":0,"integrated_lufs":-16.1,"peak_dbfs":-1.3,"noise_floor_dbfs":-66,"silence_ratio":0.03,"speech_ratio":0.93,"music_ratio":0.03,"decode_state":"ok","notes":"Already mastered podcast episode near broadcast target."}
+{
+  "id": "06-already-mastered",
+  "original_name": "published-episode.mp3",
+  "size_bytes": 66000000,
+  "format": "mp3",
+  "mime": "audio/mpeg",
+  "duration_seconds": 2400,
+  "channels": 2,
+  "sample_rate_hz": 44100,
+  "bit_depth": 0,
+  "integrated_lufs": -16.1,
+  "peak_dbfs": -1.3,
+  "noise_floor_dbfs": -66,
+  "silence_ratio": 0.03,
+  "speech_ratio": 0.93,
+  "music_ratio": 0.03,
+  "decode_state": "ok",
+  "notes": "Already mastered podcast episode near broadcast target."
+}

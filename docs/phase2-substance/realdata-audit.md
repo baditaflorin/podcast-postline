@@ -10,18 +10,18 @@ Mode: C, GitHub Pages frontend plus Docker backend
 
 The fixture set uses compact media-profile inputs under `test/fixtures/realdata/` rather than committing large copyrighted recordings. Each profile represents a real-world input class podcast editors routinely receive, with an expected-output file that the inference suite checks.
 
-| # | Fixture | Real-World Input | v1 Behavior | Expected Phase 2 Behavior | Failure Kind |
-|---|---|---|---|---|---|
-| 1 | `01-clean-studio` | Clean 48 kHz mono studio WAV, normal speech, modest room tone. | Processes with defaults and likely succeeds. | High-confidence plan: denoise lightly, normalize to -16 LUFS, trim only true dead air. | Mostly OK. |
-| 2 | `02-riverside-stereo` | Riverside/Zoom stereo M4A, two speakers split across channels. | Downmixes to mono silently. | Detect stereo speech, preserve stereo, warn that RNNoise is skipped unless mono is requested. | Silent wrongness. |
-| 3 | `03-iphone-hvac` | iPhone Voice Memo M4A, quiet speaker, steady HVAC noise. | Runs the same pipeline blindly. | Detect quiet noisy speech, recommend denoise plus normalization, warn about large gain. | Wrong-but-confident risk. |
-| 4 | `04-cafe-music-intro` | Café/field recording with music intro and speech later. | RNNoise and trim may damage the intro. | Detect mixed music/speech, lower confidence, keep trim conservative, warn before destructive denoise. | Wrong-but-confident. |
-| 5 | `05-two-hour-livestream` | Two-hour VBR MP3 with long pauses. | Synchronous request with no useful progress or cancel path. | Mark long job, expose cancellable processing and progress states, preserve user state. | Stuck/unclear. |
-| 6 | `06-already-mastered` | Mastered podcast MP3 already near -16 LUFS. | Reprocesses anyway. | Detect compliance and recommend minimal/no normalization. | Feels stupid. |
-| 7 | `07-archive-legacy-wav` | Old 22.05 kHz 8-bit WAV with DC offset and clipping. | Decodes without a domain warning. | Detect legacy format, clipping, DC offset, and resampling risk. | Silent quality risk. |
-| 8 | `08-near-silent` | Accidental empty/near-silent recording. | Loudness measurement fails or generic backend error. | Fail gracefully: "file appears silent"; do not produce output. | Obvious but poor explanation. |
-| 9 | `09-truncated-mp3` | Truncated MP3 from failed transfer. | Generic "audio processing failed." | Detect unreadable/truncated media and suggest re-upload/export from source. | Unactionable failure. |
-| 10 | `10-huge-wav` | Huge WAV beyond normal upload/runtime budget. | Rejects or stalls with little guidance. | Preflight size/duration risk, explain backend limit and next step. | Stuck/unclear. |
+| #   | Fixture                  | Real-World Input                                               | v1 Behavior                                                 | Expected Phase 2 Behavior                                                                             | Failure Kind                  |
+| --- | ------------------------ | -------------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------- |
+| 1   | `01-clean-studio`        | Clean 48 kHz mono studio WAV, normal speech, modest room tone. | Processes with defaults and likely succeeds.                | High-confidence plan: denoise lightly, normalize to -16 LUFS, trim only true dead air.                | Mostly OK.                    |
+| 2   | `02-riverside-stereo`    | Riverside/Zoom stereo M4A, two speakers split across channels. | Downmixes to mono silently.                                 | Detect stereo speech, preserve stereo, warn that RNNoise is skipped unless mono is requested.         | Silent wrongness.             |
+| 3   | `03-iphone-hvac`         | iPhone Voice Memo M4A, quiet speaker, steady HVAC noise.       | Runs the same pipeline blindly.                             | Detect quiet noisy speech, recommend denoise plus normalization, warn about large gain.               | Wrong-but-confident risk.     |
+| 4   | `04-cafe-music-intro`    | Café/field recording with music intro and speech later.        | RNNoise and trim may damage the intro.                      | Detect mixed music/speech, lower confidence, keep trim conservative, warn before destructive denoise. | Wrong-but-confident.          |
+| 5   | `05-two-hour-livestream` | Two-hour VBR MP3 with long pauses.                             | Synchronous request with no useful progress or cancel path. | Mark long job, expose cancellable processing and progress states, preserve user state.                | Stuck/unclear.                |
+| 6   | `06-already-mastered`    | Mastered podcast MP3 already near -16 LUFS.                    | Reprocesses anyway.                                         | Detect compliance and recommend minimal/no normalization.                                             | Feels stupid.                 |
+| 7   | `07-archive-legacy-wav`  | Old 22.05 kHz 8-bit WAV with DC offset and clipping.           | Decodes without a domain warning.                           | Detect legacy format, clipping, DC offset, and resampling risk.                                       | Silent quality risk.          |
+| 8   | `08-near-silent`         | Accidental empty/near-silent recording.                        | Loudness measurement fails or generic backend error.        | Fail gracefully: "file appears silent"; do not produce output.                                        | Obvious but poor explanation. |
+| 9   | `09-truncated-mp3`       | Truncated MP3 from failed transfer.                            | Generic "audio processing failed."                          | Detect unreadable/truncated media and suggest re-upload/export from source.                           | Unactionable failure.         |
+| 10  | `10-huge-wav`            | Huge WAV beyond normal upload/runtime budget.                  | Rejects or stalls with little guidance.                     | Preflight size/duration risk, explain backend limit and next step.                                    | Stuck/unclear.                |
 
 ## Top 5 Logic Gaps
 
@@ -69,4 +69,3 @@ The fixture set uses compact media-profile inputs under `test/fixtures/realdata/
 - No accounts, cloud storage, cross-device history, or collaboration.
 - No manual waveform editor.
 - No real-time live-stream processing.
-

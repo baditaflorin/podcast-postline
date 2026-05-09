@@ -22,4 +22,3 @@ The timestamp is excluded from determinism tests and included only as runtime pr
 ## Alternatives Considered
 
 - Runtime-only logs: rejected because users need provenance with the export response.
-
