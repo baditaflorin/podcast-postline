@@ -145,6 +145,63 @@ test("creates share links for small workspace state", async ({ page }) => {
   await expect(page).toHaveURL(/#postline=/);
 });
 
+test("imports workspace state and starts fresh", async ({ page }) => {
+  await page.goto("/");
+
+  await page.locator('input[accept*=".postline.json"]').setInputFiles({
+    name: "imported.postline.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        schema_version: "phase3.workspace.v1",
+        exported_at: "2026-05-10T00:00:00.000Z",
+        app_version: "0.3.0",
+        commit: "e2e",
+        preferences: {
+          apiBaseUrl: "http://localhost:8080",
+          targetLufs: -16,
+          format: "mp3",
+          trimSilence: true,
+          denoise: true,
+          normalize: true,
+          preserveStereo: false,
+        },
+        selected_job_id: "imported",
+        jobs: [
+          {
+            id: "imported",
+            name: "imported.wav",
+            size: 2048,
+            type: "audio/wav",
+            last_modified: 1,
+            format_guess: "wav",
+            confidence: 0.92,
+            status: "ready",
+            warning: null,
+            error: null,
+            plan: null,
+            provenance: null,
+          },
+        ],
+        session_overrides: {},
+        activity: [],
+      }),
+    ),
+  });
+
+  await expect(page.getByText("Reattach original audio files")).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Recording queue" })
+      .getByRole("button", { name: /imported\.wav Reattach audio/ }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Start fresh" }).click();
+
+  await expect(page.getByText("Waiting for audio")).toBeVisible();
+  await expect(page.getByText("imported.wav")).toHaveCount(0);
+});
+
 test("processes an active recording and exposes provenance actions", async ({
   page,
 }) => {
