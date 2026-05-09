@@ -19,6 +19,7 @@ type wavFacts struct {
 }
 
 func parseWAV(path string) (wavFacts, error) {
+	// #nosec G304 -- path is a staged upload or fixture path owned by the caller.
 	file, err := os.Open(path)
 	if err != nil {
 		return wavFacts{}, err
@@ -128,7 +129,11 @@ func inspectPCM(reader io.Reader, sampleCount int, bitDepth int) (float64, float
 			if _, err := io.ReadFull(reader, buf[:2]); err != nil {
 				return peak, float64(silent) / float64(i+1), sum / float64(i+1)
 			}
-			sample = float64(int16(binary.LittleEndian.Uint16(buf[:2]))) / 32768
+			raw := int(binary.LittleEndian.Uint16(buf[:2]))
+			if raw >= 32768 {
+				raw -= 65536
+			}
+			sample = float64(raw) / 32768
 		case 24:
 			if _, err := io.ReadFull(reader, buf[:3]); err != nil {
 				return peak, float64(silent) / float64(i+1), sum / float64(i+1)

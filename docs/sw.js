@@ -1,4 +1,4 @@
-const CACHE = "podcast-postline-v0.1.0";
+const CACHE = "podcast-postline-v0.2.0";
 const APP_SHELL = [
   "/podcast-postline/",
   "/podcast-postline/index.html",

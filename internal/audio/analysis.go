@@ -10,15 +10,21 @@ import (
 	"io"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
 const (
+	// SchemaVersion identifies the media profile and plan contract returned by preflight.
 	SchemaVersion = "phase2.media-profile.v1"
-	StatusReady   = "ready"
-	StatusReview  = "needs_review"
+	// StatusReady means the inferred plan can run without user review.
+	StatusReady = "ready"
+	// StatusReview means the inferred plan is usable but should be checked first.
+	StatusReview = "needs_review"
+	// StatusBlocked means the input should not be processed.
 	StatusBlocked = "blocked"
 )
 
@@ -90,7 +96,7 @@ type FileAnalyzer struct {
 }
 
 // Analyze extracts stable file facts without invoking the destructive pipeline.
-func (a FileAnalyzer) Analyze(_ context.Context, inputPath string, originalName string) (MediaProfile, error) {
+func (a FileAnalyzer) Analyze(ctx context.Context, inputPath string, originalName string) (MediaProfile, error) {
 	stat, err := os.Stat(inputPath)
 	if err != nil {
 		return MediaProfile{}, fmt.Errorf("stat upload: %w", err)
@@ -116,6 +122,10 @@ func (a FileAnalyzer) Analyze(_ context.Context, inputPath string, originalName 
 	if profile.SizeBytes == 0 {
 		profile.DecodeState = "empty"
 		return profile, nil
+	}
+
+	if probed, ok := probeWithFFprobe(ctx, inputPath); ok {
+		mergeProbe(&profile, probed)
 	}
 
 	if profile.Format == "wav" {
@@ -147,7 +157,96 @@ func (a FileAnalyzer) Analyze(_ context.Context, inputPath string, originalName 
 	return profile, nil
 }
 
+type ffprobeResult struct {
+	Format struct {
+		Duration string `json:"duration"`
+		Size     string `json:"size"`
+	} `json:"format"`
+	Streams []struct {
+		CodecType        string `json:"codec_type"`
+		Channels         int    `json:"channels"`
+		SampleRate       string `json:"sample_rate"`
+		BitsPerSample    int    `json:"bits_per_sample"`
+		BitsPerRawSample string `json:"bits_per_raw_sample"`
+	} `json:"streams"`
+}
+
+func probeWithFFprobe(ctx context.Context, inputPath string) (MediaProfile, bool) {
+	binary, err := exec.LookPath("ffprobe")
+	if err != nil {
+		return MediaProfile{}, false
+	}
+	// #nosec G204 -- ffprobe is a fixed local binary resolved from PATH; only the staged upload path varies.
+	cmd := exec.CommandContext(
+		ctx,
+		binary,
+		"-v",
+		"error",
+		"-print_format",
+		"json",
+		"-show_format",
+		"-show_streams",
+		inputPath,
+	)
+	output, err := cmd.Output()
+	if err != nil {
+		return MediaProfile{}, false
+	}
+	var result ffprobeResult
+	if err := json.Unmarshal(output, &result); err != nil {
+		return MediaProfile{}, false
+	}
+
+	profile := MediaProfile{DecodeState: "ok"}
+	if duration, err := strconv.ParseFloat(result.Format.Duration, 64); err == nil {
+		profile.DurationSeconds = duration
+	}
+	if size, err := strconv.ParseInt(result.Format.Size, 10, 64); err == nil {
+		profile.SizeBytes = size
+	}
+	for _, stream := range result.Streams {
+		if stream.CodecType != "audio" {
+			continue
+		}
+		profile.Channels = stream.Channels
+		if sampleRate, err := strconv.Atoi(stream.SampleRate); err == nil {
+			profile.SampleRateHz = sampleRate
+		}
+		profile.BitDepth = stream.BitsPerSample
+		if profile.BitDepth == 0 {
+			if raw, err := strconv.Atoi(stream.BitsPerRawSample); err == nil {
+				profile.BitDepth = raw
+			}
+		}
+		break
+	}
+	return profile, profile.DurationSeconds > 0 || profile.Channels > 0 || profile.SampleRateHz > 0
+}
+
+func mergeProbe(profile *MediaProfile, probed MediaProfile) {
+	if probed.DecodeState != "" {
+		profile.DecodeState = probed.DecodeState
+	}
+	if probed.SizeBytes > 0 {
+		profile.SizeBytes = probed.SizeBytes
+	}
+	if probed.DurationSeconds > 0 {
+		profile.DurationSeconds = probed.DurationSeconds
+	}
+	if probed.Channels > 0 {
+		profile.Channels = probed.Channels
+	}
+	if probed.SampleRateHz > 0 {
+		profile.SampleRateHz = probed.SampleRateHz
+	}
+	if probed.BitDepth > 0 {
+		profile.BitDepth = probed.BitDepth
+	}
+}
+
 // InferPlan turns normalized media facts into a safe processing recommendation.
+//
+//nolint:gocyclo // Audio safety rules stay linear so every warning remains explainable and ordered.
 func InferPlan(profile MediaProfile, targetLUFS float64, maxUploadBytes int64) ProcessingPlan {
 	if targetLUFS == 0 {
 		targetLUFS = -16
@@ -336,6 +435,7 @@ func mimeFromName(name string) string {
 }
 
 func sha256File(path string) (string, error) {
+	// #nosec G304 -- path is a staged upload or fixture path owned by the caller.
 	file, err := os.Open(path)
 	if err != nil {
 		return "", fmt.Errorf("open upload for fingerprint: %w", err)

@@ -3,7 +3,7 @@ package version
 
 var (
 	// Version is the semantic application version.
-	Version = "0.1.0"
+	Version = "0.2.0"
 	// Commit is the git commit used for the build.
 	Commit = "dev"
 	// Date is the UTC build timestamp.

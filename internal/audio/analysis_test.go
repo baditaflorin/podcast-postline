@@ -139,6 +139,7 @@ func loadFixtures(t testing.TB) []fixturePair {
 
 	pairs := make([]fixturePair, 0, len(inputs))
 	for _, inputPath := range inputs {
+		// #nosec G304 -- test fixture paths come from the repository fixture glob above.
 		inputFile, err := os.Open(inputPath)
 		if err != nil {
 			t.Fatal(err)
@@ -150,6 +151,7 @@ func loadFixtures(t testing.TB) []fixturePair {
 		}
 
 		expectedPath := strings.TrimSuffix(inputPath, ".input.json") + ".expected.json"
+		// #nosec G304 -- expected fixture paths are derived from repository input fixtures.
 		body, err := os.ReadFile(expectedPath)
 		if err != nil {
 			t.Fatal(err)

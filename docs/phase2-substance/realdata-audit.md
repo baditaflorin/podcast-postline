@@ -61,6 +61,15 @@ The fixture set uses compact media-profile inputs under `test/fixtures/realdata/
 - Frontend exposes progress within 300 ms and cancellation during processing.
 - Every processing response includes structured provenance headers.
 
+## Final Phase 2 Result
+
+- 7 of 10 fixtures now produce a usable processing plan without manual setting changes.
+- 3 of 10 fixtures are intentionally blocked with domain-specific explanations: silent/unusable, truncated media, and over backend budget.
+- 10 of 10 fixtures pass deterministic inference tests.
+- 5 synthetic edge profiles cover empty, huge, truncated, unknown-format, and Unicode-name inputs without panics.
+- Median fixture inference benchmark: 8.944 us per 10-fixture pass.
+- Frontend states now cover preflighting, needs-review, blocked, processing, processed, recoverable error, cancellation, and debug inspection.
+
 ## Out of Scope
 
 - No new product category or feature surface beyond smarter upload/process/export behavior.
