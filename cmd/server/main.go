@@ -85,10 +85,11 @@ func buildProcessor(cfg config.Config) audio.Processor {
 		return audio.StubProcessor{WorkDir: cfg.WorkDir}
 	}
 	return audio.PythonProcessor{
-		PythonBin:   cfg.PythonBin,
-		ScriptPath:  cfg.PipelineScript,
-		RNNoiseDemo: cfg.RNNoiseDemo,
-		WorkDir:     cfg.WorkDir,
+		PythonBin:      cfg.PythonBin,
+		ScriptPath:     cfg.PipelineScript,
+		RNNoiseDemo:    cfg.RNNoiseDemo,
+		WorkDir:        cfg.WorkDir,
+		CommandTimeout: cfg.ProcessorTimeout,
 	}
 }
 

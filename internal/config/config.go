@@ -11,16 +11,17 @@ import (
 
 // Config contains all runtime settings for the API server.
 type Config struct {
-	AppEnv          string
-	Port            string
-	AllowedOrigins  []string
-	MaxUploadBytes  int64
-	ProcessorMode   string
-	PythonBin       string
-	PipelineScript  string
-	RNNoiseDemo     string
-	WorkDir         string
-	ShutdownTimeout time.Duration
+	AppEnv           string
+	Port             string
+	AllowedOrigins   []string
+	MaxUploadBytes   int64
+	ProcessorMode    string
+	PythonBin        string
+	PipelineScript   string
+	RNNoiseDemo      string
+	WorkDir          string
+	ShutdownTimeout  time.Duration
+	ProcessorTimeout time.Duration
 }
 
 // Load reads environment variables, applies defaults, and validates the result.
@@ -29,18 +30,23 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	processorTimeoutSeconds, err := intEnv("PROCESSOR_TIMEOUT_SECONDS", 600)
+	if err != nil {
+		return Config{}, err
+	}
 
 	cfg := Config{
-		AppEnv:          stringEnv("APP_ENV", "development"),
-		Port:            stringEnv("PORT", "8080"),
-		AllowedOrigins:  csvEnv("ALLOWED_ORIGINS", "http://localhost:5173,https://baditaflorin.github.io"),
-		MaxUploadBytes:  int64(maxUploadMB) * 1024 * 1024,
-		ProcessorMode:   stringEnv("PROCESSOR_MODE", "real"),
-		PythonBin:       stringEnv("PYTHON_BIN", "python3"),
-		PipelineScript:  stringEnv("PIPELINE_SCRIPT", "backend/scripts/process_audio.py"),
-		RNNoiseDemo:     stringEnv("RNNOISE_DEMO", "rnnoise_demo"),
-		WorkDir:         stringEnv("WORK_DIR", os.TempDir()),
-		ShutdownTimeout: 15 * time.Second,
+		AppEnv:           stringEnv("APP_ENV", "development"),
+		Port:             stringEnv("PORT", "8080"),
+		AllowedOrigins:   csvEnv("ALLOWED_ORIGINS", "http://localhost:5173,https://baditaflorin.github.io"),
+		MaxUploadBytes:   int64(maxUploadMB) * 1024 * 1024,
+		ProcessorMode:    stringEnv("PROCESSOR_MODE", "real"),
+		PythonBin:        stringEnv("PYTHON_BIN", "python3"),
+		PipelineScript:   stringEnv("PIPELINE_SCRIPT", "backend/scripts/process_audio.py"),
+		RNNoiseDemo:      stringEnv("RNNOISE_DEMO", "rnnoise_demo"),
+		WorkDir:          stringEnv("WORK_DIR", os.TempDir()),
+		ShutdownTimeout:  15 * time.Second,
+		ProcessorTimeout: time.Duration(processorTimeoutSeconds) * time.Second,
 	}
 
 	if cfg.Port == "" {
@@ -51,6 +57,9 @@ func Load() (Config, error) {
 	}
 	if cfg.ProcessorMode != "real" && cfg.ProcessorMode != "stub" {
 		return Config{}, fmt.Errorf("PROCESSOR_MODE must be real or stub")
+	}
+	if cfg.ProcessorTimeout <= 0 {
+		return Config{}, fmt.Errorf("PROCESSOR_TIMEOUT_SECONDS must be positive")
 	}
 
 	return cfg, nil

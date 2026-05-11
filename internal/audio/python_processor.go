@@ -4,20 +4,28 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 // PythonProcessor runs the production Python/native audio pipeline.
+//
+// CommandTimeout caps how long the Python script may run end to end. The
+// previous version exposed this field as a string and never read it; the
+// process inherited only the caller's context, so a hung ffmpeg/sox/rnnoise
+// invocation could pin the worker indefinitely. Zero leaves the wall-clock
+// limit to ctx alone; production deployments should set a real value.
 type PythonProcessor struct {
 	PythonBin      string
 	ScriptPath     string
 	RNNoiseDemo    string
 	WorkDir        string
-	CommandTimeout string
+	CommandTimeout time.Duration
 }
 
 // Process executes the configured Python pipeline and returns the exported file.
@@ -61,8 +69,15 @@ func (p PythonProcessor) Process(ctx context.Context, inputPath string, original
 		pythonBin = "python3"
 	}
 
+	runCtx := ctx
+	if p.CommandTimeout > 0 {
+		var cancel context.CancelFunc
+		runCtx, cancel = context.WithTimeout(ctx, p.CommandTimeout)
+		defer cancel()
+	}
+
 	// #nosec G204 -- pythonBin and script path are deployment configuration, not user input.
-	cmd := exec.CommandContext(ctx, pythonBin, args...)
+	cmd := exec.CommandContext(runCtx, pythonBin, args...)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -70,6 +85,14 @@ func (p PythonProcessor) Process(ctx context.Context, inputPath string, original
 
 	if err := cmd.Run(); err != nil {
 		_ = os.RemoveAll(dir)
+		// Distinguish timeouts from arbitrary pipeline failures so the API can
+		// reply with a 504-like error code instead of a generic 500.
+		if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
+			return Result{}, fmt.Errorf(
+				"audio pipeline timed out after %s: %w: %s",
+				p.CommandTimeout, err, stderr.String(),
+			)
+		}
 		return Result{}, fmt.Errorf("run audio pipeline: %w: %s", err, stderr.String())
 	}
 
