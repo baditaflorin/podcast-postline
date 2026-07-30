@@ -69,5 +69,5 @@ ENV APP_ENV=production \
   WORK_DIR=/tmp
 
 EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["/app/postline-server", "-healthcheck"]
+HEALTHCHECK --interval=60s --timeout=5s --start-period=10s --retries=3 CMD ["/app/postline-server", "-healthcheck"]
 ENTRYPOINT ["/app/postline-server"]
