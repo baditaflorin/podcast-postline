@@ -3,7 +3,7 @@ module github.com/baditaflorin/podcast-postline
 go 1.26.3
 
 require (
-	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-chi/chi/v5 v5.4.0
 	github.com/go-chi/cors v1.2.2
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/prometheus/client_golang v1.23.2
